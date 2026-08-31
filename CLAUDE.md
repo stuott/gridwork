@@ -14,17 +14,24 @@ they are display-only and never write into the grid. `solution` is used for win
 detection only and is never shown. Any feature that would hand over an answer
 is out of scope, however convenient.
 
+**The one exception: fog of war.** A fog puzzle's own rule is that a *correct*
+digit lifts the fog around it, so `state/fog.ts` does compare entries against
+`solution`. That is the variant, not a drift — fog that lifted for any digit
+would be no puzzle at all — and it still never shows a digit the solver hasn't
+earned. It is the only sanctioned second use of `solution`; anything else that
+wants to read it is the hard rule again, not a precedent. See design.md 11.
+
 ## Commands
 
 ```bash
 npm run dev          # electron-vite dev (Electron window + renderer dev server)
 npm run build        # production build into out/
-npm test             # typecheck + all six smoke suites -- run this before finishing
+npm test             # typecheck + all seven smoke suites -- run this before finishing
 npm run typecheck    # tsc --noEmit (strict is ON; keep it at zero errors)
 ```
 
 Individual suites: `test:importer`, `test:scl`, `test:validate`, `test:phase4`,
-`test:selection`, `test:board`.
+`test:selection`, `test:board`, `test:fog`.
 
 ## Before you edit: check for a concurrent session
 
@@ -53,7 +60,7 @@ src/renderer/src/
     formats/         fpuzzles.ts, scl.ts, puzzleZipper.ts
   model/types.ts  PuzzleModel + the Constraint union. The contract everything shares.
   solver/         validate.ts (conflicts), candidates.ts, hints.ts. No auto-solving.
-  state/          selection, history (undo), timer, persistence (save/resume)
+  state/          selection, history (undo), timer, persistence (save/resume), fog
   render/board.ts The interactive SVG board. Largest file; see its section below.
   ui/             icons.ts, settingsModal.ts
   settings.ts     app-wide VerificationPrefs (load/save + pub/sub)
@@ -87,6 +94,16 @@ into the validated union — showing the user the real picture so they can apply
 the rule themselves is the whole design. Corollary: anything scl draws that we
 drop is a bug, because the picture is then incomplete (see the audit's open
 items on `arrows` and overlay `text`).
+
+**Fog hides things from the app too, not just from the eye.** Every aid that
+reasons about the grid — conflicts, auto-candidates, hints — runs against
+`revealedModel()` from `state/fog.ts`, never `this.model` directly. A hidden
+given that flags a conflict, or eliminates a candidate, has announced itself,
+and the fog is then decoration. The fog mask itself is a pure function of
+(declared lights + current grid + solution): nothing latches, nothing is
+stored, which is what makes undo and save/resume work without fog bookkeeping.
+Drawing follows the same one-mechanism rule — one opaque rect per covered cell,
+painted after every other layer, so no draw routine needs to know about fog.
 
 **Never validate a rule the puzzle might not have.** If a layout can't be read
 with confidence — jigsaw regions being the live example — report it as

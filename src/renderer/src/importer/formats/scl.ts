@@ -8,7 +8,9 @@ import {
   type SclDecorationArrow,
   type SclDecorationLine,
   type SclDecorationOverlay,
+  type FogLight,
 } from "../../model/types";
+import { fogImportNotes } from "../../state/fog";
 
 /**
  * SudokuPad's native "scl"/"ctc" format.
@@ -289,6 +291,33 @@ function parseCageMetadata(cages: unknown): Record<string, string> {
 }
 
 /**
+ * A cell reference in one of scl's fog lists.
+ *
+ * Which spelling those lists use isn't settled from a real payload yet:
+ * scl's own `cages` use 0-indexed [row, col] pairs, while the f-puzzles
+ * side of the same feature uses "R1C1" strings, and SudokuPad's converters
+ * pass fog lists through the same cell parser as everything else. Both are
+ * accepted here rather than guessing one, since the two are trivially
+ * distinguishable and getting it wrong would fog the wrong cells (an
+ * off-by-one on fog is not a cosmetic bug -- it hides a different part of
+ * the puzzle). Anything unrecognizable returns undefined and is skipped.
+ */
+function parseFogCellRef(v: unknown): CellRef | undefined {
+  if (Array.isArray(v) && v.length === 2) {
+    const row = Number(v[0]);
+    const col = Number(v[1]);
+    if (!Number.isFinite(row) || !Number.isFinite(col)) return undefined;
+    return { row: row + 1, col: col + 1 };
+  }
+  if (typeof v === "string") {
+    const m = /^\s*R(\d+)C(\d+)\s*$/i.exec(v);
+    if (!m) return undefined;
+    return { row: Number(m[1]), col: Number(m[2]) };
+  }
+  return undefined;
+}
+
+/**
  * SudokuPad emits a full-grid `{class: "board-position"}` underlay -- a
  * transparent rect marking the board's own bounds. It's layout plumbing,
  * not a puzzle marking, so keeping it would make the board tell the solver
@@ -466,6 +495,8 @@ const HANDLED_KEYS = new Set([
   "cellSize",
   "settings",
   "source",
+  "fogofwar",
+  "foglight",
 ]);
 
 export function parseScl(raw: unknown): PuzzleModel {
@@ -509,11 +540,38 @@ export function parseScl(raw: unknown): PuzzleModel {
     }
   };
 
+  // Fog of war. scl carries it two ways and a puzzle may use either:
+  // top-level `fogofwar`/`foglight` lists, or -- more commonly, since
+  // SudokuPad routes most puzzle metadata through cages -- a cage whose
+  // `value` is the literal string "fow" or "foglight". A "fow" cell lights
+  // the 3x3 around itself; a "foglight" cell lights only itself.
+  // Confirmed against sudocle's fpuzzlesconverter.ts/ctcpuzzleconverter.ts;
+  // no real fog payload has been read yet (see state/fog.ts's TODO).
+  let fogLights: FogLight[] | undefined;
+  const addFogCells = (cells: unknown, size: 1 | 3) => {
+    fogLights ??= [];
+    if (!Array.isArray(cells)) return;
+    for (const raw of cells) {
+      const cell = parseFogCellRef(raw);
+      if (cell) fogLights.push({ cell, size });
+    }
+  };
+  if (Array.isArray(obj.fogofwar)) addFogCells(obj.fogofwar, 3);
+  if (Array.isArray(obj.foglight)) addFogCells(obj.foglight, 1);
+
   if (Array.isArray(obj.cages)) {
     tryParse("cages", () => {
       for (const item of obj.cages as unknown[]) {
         const it = item as Record<string, unknown>;
         if (!it || typeof it !== "object" || !Array.isArray(it.cells)) continue;
+        // A fog cage is not a killer cage: its `value` is a keyword, not a
+        // sum, so it has to be taken out of the running before the cage
+        // parsing below reads `value`/`unique`.
+        const keyword = typeof it.value === "string" ? it.value.trim().toLowerCase() : "";
+        if (keyword === "fow" || keyword === "foglight") {
+          addFogCells(it.cells, keyword === "fow" ? 3 : 1);
+          continue;
+        }
         const cells = parseRCs(it.cells);
         const sum = asNumber(it.value);
         if (sum !== undefined) {
@@ -635,6 +693,8 @@ export function parseScl(raw: unknown): PuzzleModel {
     pushUnsupported(key, value);
   }
 
+  if (fogLights) importNotes.push(...fogImportNotes(solution !== undefined));
+
   return {
     size,
     title,
@@ -643,6 +703,7 @@ export function parseScl(raw: unknown): PuzzleModel {
     grid,
     constraints,
     globalRules,
+    fog: fogLights ? { lights: fogLights } : undefined,
     irregularRegions: irregularRegions ? true : undefined,
     solution,
     importNotes: importNotes.length > 0 ? importNotes : undefined,

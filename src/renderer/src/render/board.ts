@@ -11,6 +11,7 @@ import {
 import { findConflicts, conflictCellKeySet, type Conflict } from "../solver/validate";
 import { computeCandidates } from "../solver/candidates";
 import { findHint, type Hint } from "../solver/hints";
+import { computeFogMask, foggedCount, isFogged, revealedModel, type FogMask } from "../state/fog";
 import { HistoryManager } from "../state/history";
 import { CellSelection } from "../state/selection";
 import { Timer, formatElapsed } from "../state/timer";
@@ -390,11 +391,11 @@ export class SudokuBoard {
     const prefs = getVerificationPrefs();
     this.autoCandidates = prefs.autoCandidates;
     this.liveChecking = prefs.liveChecking;
-    if (this.autoCandidates) computeCandidates(this.model);
+    if (this.autoCandidates) this.recomputeCandidates();
     this.unsubscribeSettings = subscribeVerification((next) => {
       this.autoCandidates = next.autoCandidates;
       this.liveChecking = next.liveChecking;
-      if (this.autoCandidates) computeCandidates(this.model);
+      if (this.autoCandidates) this.recomputeCandidates();
       if (this.liveChecking) this.manualConflicts = null;
       this.render();
     });
@@ -519,7 +520,7 @@ export class SudokuBoard {
   }
 
   private checkNow() {
-    this.manualConflicts = findConflicts(this.model);
+    this.manualConflicts = findConflicts(revealedModel(this.model, computeFogMask(this.model)));
     this.render();
   }
 
@@ -612,15 +613,49 @@ export class SudokuBoard {
     this.afterEdit();
   }
 
+  /**
+   * Auto-candidates, computed from what the solver can actually see.
+   *
+   * On a fog puzzle the computation runs against the revealed view and the
+   * resulting sets are copied back onto the real cells, so a digit hidden
+   * under the fog never eliminates a candidate and thereby announces
+   * itself. Non-fog puzzles take the original path untouched.
+   */
+  private recomputeCandidates() {
+    const mask = computeFogMask(this.model);
+    if (!mask) {
+      computeCandidates(this.model);
+      return;
+    }
+    const view = revealedModel(this.model, mask);
+    computeCandidates(view);
+    for (let r = 0; r < this.model.size; r++) {
+      for (let c = 0; c < this.model.size; c++) {
+        this.model.grid[r]![c]!.candidates = view.grid[r]![c]!.candidates;
+      }
+    }
+  }
+
   private showHint() {
-    this.currentHint = findHint(this.model);
+    // Hints reason about the revealed view only. A hint derived from a
+    // hidden digit, or one pointing at a covered cell, would hand over
+    // information the fog exists to withhold -- even just saying "this
+    // cell is a naked single" tells the solver it's empty and placeable.
+    const fogMask = computeFogMask(this.model);
+    const hint = findHint(revealedModel(this.model, fogMask));
+    const pointsIntoFog =
+      hint !== null &&
+      [...hint.cells, ...(hint.eliminationCells ?? [])].some(({ r, c }) => isFogged(fogMask, r, c));
+    this.currentHint = pointsIntoFog ? null : hint;
     this.hintPanel.hidden = false;
     if (this.currentHint) {
       this.hintTechniqueEl.textContent = this.currentHint.technique;
       this.hintMessageEl.textContent = this.currentHint.message;
     } else {
       this.hintTechniqueEl.textContent = "";
-      this.hintMessageEl.textContent = "No hint available from the techniques this app knows -- try a different part of the grid, or work it out by hand.";
+      this.hintMessageEl.textContent = pointsIntoFog
+        ? "The only technique available right now involves cells still under the fog, so there's nothing that can be said about it without giving the fog away. Light more of the board first."
+        : "No hint available from the techniques this app knows -- try a different part of the grid, or work it out by hand.";
     }
     this.render();
   }
@@ -754,7 +789,7 @@ export class SudokuBoard {
     this.manualConflicts = null;
     this.currentHint = null;
     this.hintPanel.hidden = true;
-    if (this.autoCandidates) computeCandidates(this.model);
+    if (this.autoCandidates) this.recomputeCandidates();
     this.updateUndoRedoButtons();
     this.saveProgress();
     this.render();
@@ -779,7 +814,13 @@ export class SudokuBoard {
     const { size, grid } = model;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-    const conflicts = findConflicts(model);
+    // Fog is recomputed from the live grid every render rather than stored:
+    // see state/fog.ts. Null on every non-fog puzzle, which is the only
+    // cost the feature imposes on the other 99% of boards.
+    const fogMask = computeFogMask(model);
+    // Conflicts are found on the *revealed* view, so a hidden given can
+    // never light up a cell in red and give itself away.
+    const conflicts = findConflicts(revealedModel(model, fogMask));
     const displayConflicts = this.liveChecking ? conflicts : this.manualConflicts ?? [];
     const conflictKeys = conflictCellKeySet(displayConflicts);
     const { boxW, boxH } = boxDims(size);
@@ -929,8 +970,30 @@ export class SudokuBoard {
       }
     }
 
+    // --- fog cover, over everything the fog is meant to hide ---
+    // Drawn after the digits and every constraint/decoration layer, so one
+    // opaque rect per covered cell hides all of it at once -- givens,
+    // entries, pencil marks, highlights, cage outlines, thermos, grid
+    // lines. That is exactly how SudokuPad presents fog, and it means no
+    // draw routine anywhere else has to learn about fog.
+    if (fogMask) {
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (!isFogged(fogMask, r, c)) continue;
+          svg.appendChild(
+            this.el("rect", { x: this.gx(c), y: this.gy(r), width: CELL, height: CELL, class: "fog-cell" }),
+          );
+        }
+      }
+      // The selection outline was drawn under the decorations; redraw it on
+      // top of the fog so a covered cell you have selected is still visible
+      // as selected. Fogged cells stay fully selectable and typeable -- the
+      // fog hides what's there, it doesn't lock the cell.
+      this.drawSelectionOutline(svg);
+    }
+
     // --- status: win detection / conflict count ---
-    this.renderStatus(conflicts, displayConflicts);
+    this.renderStatus(conflicts, displayConflicts, fogMask);
     this.updateHighlightSwatchState();
   }
 
@@ -1422,12 +1485,14 @@ export class SudokuBoard {
    * `conflicts` when live checking is on, or just the last "Check now"
    * result (or nothing) when it's off.
    */
-  private renderStatus(conflicts: Conflict[], displayConflicts: Conflict[]) {
+  private renderStatus(conflicts: Conflict[], displayConflicts: Conflict[], fogMask: FogMask | null) {
     const { model } = this;
     const allFilled = model.grid.every((row) => row.every((cell) => cell.given !== undefined || cell.value !== undefined));
 
     if (!allFilled) {
       const bits: string[] = [];
+      const covered = foggedCount(fogMask);
+      if (covered > 0) bits.push(`${covered} cell${covered === 1 ? "" : "s"} still in fog`);
       if (this.selection.size > 1) bits.push(`${this.selection.size} cells selected`);
       if (displayConflicts.length > 0) bits.push(`${displayConflicts.length} conflict(s) found.`);
       this.statusEl.textContent = bits.join(" · ");

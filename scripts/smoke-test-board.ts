@@ -692,5 +692,54 @@ const digitsOn = (m: Mounted): string[] =>
   setVerificationPrefs({ autoCandidates: before });
 }
 
+// --- fog of war ------------------------------------------------------------
+// The fog cover is one opaque rect per covered cell drawn after everything
+// else; these check that it exists, that it really is last (a fog rect
+// drawn before the digits would hide nothing), and that a correct digit
+// burns some of it off.
+{
+  const SOLUTION = [
+    [1, 2, 3, 4],
+    [3, 4, 1, 2],
+    [2, 1, 4, 3],
+    [4, 3, 2, 1],
+  ];
+  const fogModel = () =>
+    model(4, {
+      solution: SOLUTION.map((row) => [...row]),
+      fog: { lights: [{ cell: { row: 1, col: 1 }, size: 1 }] },
+    });
+
+  const plain = mount(model(4));
+  check("a non-fog puzzle draws no fog at all", plain.svg.querySelectorAll("rect.fog-cell").length === 0);
+  unmount(plain);
+
+  const mounted = mount(fogModel());
+  const fogRects = () => mounted.svg.querySelectorAll("rect.fog-cell").length;
+  check("a fog puzzle covers every cell but its declared light", fogRects() === 15);
+
+  const children = [...mounted.svg.children];
+  const lastDigitish = children.map((el, i) => (el.tagName === "text" ? i : -1)).reduce((a, b) => Math.max(a, b), -1);
+  const firstFog = children.findIndex((el) => el.classList.contains("fog-cell"));
+  check("fog is drawn after the digits, so it actually covers them", firstFog > lastDigitish);
+
+  check(
+    "the status line says how much is still covered",
+    (mounted.container.querySelector(".board-status")?.textContent ?? "").includes("still in fog"),
+  );
+
+  clickCell(mounted, 1, 1);
+  press("4"); // SOLUTION[1][1] -- correct, so it lights its 3x3
+  check("a correct digit burns off fog", fogRects() === 7);
+
+  press("Backspace");
+  check("erasing it puts the fog back", fogRects() === 15);
+
+  clickCell(mounted, 3, 3);
+  press("9"); // wrong
+  check("a wrong digit lights nothing", fogRects() === 15);
+  unmount(mounted);
+}
+
 console.log(failed ? "\nSMOKE TEST: FAILED" : "\nAll board checks passed.");
 process.exitCode = failed ? 1 : 0;

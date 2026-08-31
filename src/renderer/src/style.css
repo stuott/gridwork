@@ -630,6 +630,24 @@ h1 {
   fill: var(--conflict-strong);
 }
 
+/* Fog of war (state/fog.ts, render/board.ts). One opaque rect per covered
+   cell, drawn over every other layer -- digits, marks, cage/thermo art and
+   the grid lines all disappear under it, which is what the variant asks
+   for. Edge-to-edge with a stroke in the same color so a block of covered
+   cells reads as one continuous bank of fog instead of a tiled grid; any
+   inset or rounding would let the lines beneath show through and outline
+   the very cells being hidden.
+
+   Derived from --ink/--surface with color-mix rather than given a token
+   per theme: fog is "the board, obscured", so it should follow whatever
+   each of the six themes already sets those to. */
+.fog-cell {
+  fill: color-mix(in srgb, var(--ink) 55%, var(--surface));
+  stroke: color-mix(in srgb, var(--ink) 55%, var(--surface));
+  stroke-width: 1;
+  cursor: pointer;
+}
+
 /* Perimeter of the current selection (render/board.ts drawSelectionOutline).
    Drawn over the grid lines so a multi-cell selection stays readable on top of
    highlight colors, cages and thermos. */

@@ -300,6 +300,21 @@ export interface SclDecorationArrow {
   headLength?: number;
 }
 
+/**
+ * One cleared patch of fog: a cell whose surroundings are lit.
+ *
+ * `size` is SudokuPad's own vocabulary and only ever takes two values --
+ * 3 lights the 3x3 block centred on `cell` (clipped at the grid edge), 1
+ * lights that single cell. Confirmed against sudocle's fpuzzles/ctc
+ * converters, which normalize every fog source in both formats down to
+ * this one shape.
+ */
+export interface FogLight {
+  /** 1-indexed, like every other CellRef in this file. */
+  cell: CellRef;
+  size: 1 | 3;
+}
+
 export interface PuzzleModel {
   size: number;
   title?: string;
@@ -351,6 +366,28 @@ export interface PuzzleModel {
   irregularRegions?: boolean;
   /** The full solution digits, when the source puzzle included one (used for win detection only -- never shown to the user). */
   solution?: number[][];
+  /**
+   * Fog of war. Present (even with an empty `lights`) exactly when the
+   * source puzzle declares fog; absent means "not a fog puzzle" and no
+   * fog code path runs at all.
+   *
+   * `lights` holds only the fog the *puzzle* declares -- what is lit the
+   * moment it loads, before a single digit is entered. Everything the
+   * solver uncovers as they go is derived from the live grid by
+   * state/fog.ts and deliberately not stored here, so fog stays a pure
+   * function of (puzzle + current digits): undo puts the fog back exactly
+   * as it was, and a resumed session re-derives the same view without
+   * saving a fog snapshot.
+   *
+   * NOTE -- this is the one feature that reads `solution` for something
+   * other than win detection, because clearing fog on a *correct* digit
+   * IS the fog variant's rule; a fog puzzle where any digit lifted the fog
+   * would be no puzzle at all. It still never shows a digit the user
+   * hasn't earned. See CLAUDE.md's "the hard rule" and its fog exception.
+   */
+  fog?: {
+    lights: FogLight[];
+  };
   /**
    * Short, user-facing notes about *how this puzzle was imported* -- things
    * the solver should know that aren't the puzzle's own rules, e.g. "these

@@ -930,3 +930,110 @@ Note the tradeoff in `touch-action: none` on `.sudoku-svg`: drag-to-select now
 owns touch gestures on the board, so on a touchscreen the board can no longer be
 panned by dragging it directly (scroll the wrapper around it instead). This is
 the same tradeoff f-puzzles and SudokuPad make.
+
+## 11. Fog of war (2026-08-31)
+
+Fog puzzles start with the board almost entirely covered. Cells are uncovered
+("lit") by the lights the puzzle declares, and then by the solver's own
+*correct* digits as they go. Until 2026-08-31 this app had no concept of fog
+at all: a fog puzzle imported with its fog data silently discarded and the
+whole board on show, which is not a harder version of the puzzle -- it's a
+different, trivial one.
+
+### 11.1 Where fog lives in the two formats
+
+| Source | Key | Meaning |
+| --- | --- | --- |
+| f-puzzles | `fogofwar: ["R1C1", ...]` | each listed cell lights the 3x3 around itself |
+| f-puzzles | `foglight: ["R1C1", ...]` | each listed cell lights only itself |
+| scl/ctc | `cages: [{cells, value: "fow"}]` | as `fogofwar` (3x3 per cell) |
+| scl/ctc | `cages: [{cells, value: "foglight"}]` | as `foglight` (single cell) |
+| scl/ctc | top-level `fogofwar` / `foglight` | same two meanings |
+
+The scl cage spelling is the same trick section 7.7 documented for
+title/author/rules/solution: SudokuPad routes puzzle metadata through cages
+whose `value` is a keyword rather than a sum. `scl.ts` therefore has to take
+a fog cage out of the running *before* the killer-cage path reads `value`,
+or a "fow" cage would be parsed as a sum-less cage outline.
+
+Source for all of the above: sudocle's `fpuzzlesconverter.ts` /
+`ctcpuzzleconverter.ts` (michel-kraemer/sudocle), which normalize every fog
+spelling in both formats down to one `{center, size: 1 | 3}` shape -- the
+shape `FogLight` copies. **This is research, not a confirmed payload.** Every
+other format claim in this document that came from reading another project's
+source was wrong in some detail until a real payload settled it (7.6, 7.7),
+so a real fog puzzle in `scripts/fixtures/` is still owed; `state/fog.ts`
+carries a TODO saying so. Both importers accept `[row, col]` pairs *and*
+"R1C1" strings in the fog lists for that reason -- which spelling scl uses
+there isn't settled, the two are trivially distinguishable, and an
+off-by-one on fog hides the wrong part of the puzzle rather than merely
+looking wrong.
+
+### 11.2 The reveal rule, and why fog is the one exception to the hard rule
+
+CLAUDE.md's hard rule is that the app never solves a puzzle for the user, and
+`solution` is used for win detection only. Fog reads `solution` for something
+else: a digit is compared against it, and if it matches, its 3x3 patch
+clears. That comparison is the variant's own rule -- fog that lifted for any
+digit would make the puzzle trivially unfoggable -- so it is a deliberate,
+documented exception rather than a drift. It stays within the spirit of the
+rule in that the app still never shows a digit the solver hasn't earned: the
+fog lifting confirms what they placed, it doesn't place anything.
+
+The rule as implemented (`state/fog.ts`, matching sudocle's `makeFogLights`):
+
+- a correct digit in a **non-given** cell lights the 3x3 centred on it,
+  clipped at the grid edge;
+- a wrong digit lights nothing;
+- a **given** lights only itself and only once something else has uncovered
+  it, so givens never extend the lit area and are simply skipped;
+- with no `solution`, only the declared lights apply and the rest stays
+  covered forever -- the importer says so in a note rather than letting the
+  board look broken.
+
+**One deliberate difference from sudocle:** it latches a given as
+"discovered", so an uncovered given stays visible after the digit that
+revealed it is erased. This app latches nothing. The mask is a pure function
+of (declared lights + current grid + solution), which buys undo/redo and
+save-and-resume for free -- erasing a digit puts its fog back, no fog state
+is stored anywhere, and a resumed session re-derives exactly the same view.
+
+### 11.3 Drawing it: one rect, drawn last
+
+`render()` paints one opaque `.fog-cell` rect per covered cell *after* the
+digits and every constraint/decoration layer. That single mechanism hides
+everything the fog is supposed to hide -- givens, entries, pencil marks,
+highlight colours, cage outlines, thermos, scl decorations, the grid lines
+themselves -- and means no other draw routine in `board.ts` has to learn
+about fog. The rects are edge-to-edge and stroked in their own fill colour so
+a covered region reads as one bank of fog; any inset or corner rounding would
+let the lines underneath show through and outline the very cells being
+hidden. The selection outline is redrawn on top of the fog afterwards,
+because a covered cell is still fully selectable and typeable -- fog hides
+what's there, it doesn't lock the cell.
+
+`.fog-cell` derives its colour from `--ink`/`--surface` with `color-mix`
+rather than taking a token per theme: fog is "the board, obscured", so it
+should follow whatever each of the six themes already sets those to.
+
+### 11.4 Fog beats the solving aids
+
+Everything that reasons about the grid runs against `revealedModel()` -- a
+copy whose fogged cells hold no digit -- rather than the real grid:
+
+- **conflicts**: otherwise a hidden given would flag a red cell and announce
+  itself. This is the leak that most obviously breaks a fog puzzle, and
+  `smoke-test-fog.ts` pins both halves of it (real grid conflicts, revealed
+  view doesn't).
+- **auto-candidates**: computed on the view, then the resulting sets are
+  copied back onto the real cells, so a hidden digit never eliminates a
+  candidate and thereby gives itself away.
+- **hints**: found on the view, and a hint whose cells or elimination cells
+  are still fogged is suppressed entirely with its own message. Even saying
+  "there's a naked single here" would tell the solver that a covered cell is
+  empty and placeable.
+
+On a non-fog puzzle `computeFogMask` returns null and `revealedModel` hands
+back the model itself, so none of this allocates or behaves differently from
+before fog existed.
+

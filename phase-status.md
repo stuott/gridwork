@@ -30,6 +30,10 @@ A desktop app that helps you solve variant sudoku puzzles you find online — it
 
 One thing deliberately *not* renamed: the keys the app saves your progress, history and settings under still start with `sudoku:`. Changing them would make every saved puzzle and your theme choice disappear on first launch, which isn't worth a tidier name in a file nobody sees.
 
+**Fog of war puzzles.** As of 2026-08-31 the app handles fog puzzles, where the board starts almost entirely hidden and you uncover it as you go. Covered cells are drawn over completely — clues, markings, gridlines and all — and a digit you place *correctly* clears the 3x3 around it, while a wrong one clears nothing and erasing a digit puts its fog back. This is the one place the app compares your entries against the puzzle's answer, because that comparison is the fog rule itself; it still never fills anything in or shows you a digit. The solving aids all respect the fog too — mistake-checking, auto pencil marks and hints work only from what you've uncovered, so nothing hidden can leak back out through a red cell or a hint. Puzzles that declare fog but ship no answer to check against load with a note explaining that the fog can't lift.
+
+One caveat worth knowing: the fog file formats were worked out from another player's source code rather than from a real fog puzzle, which is exactly the route that produced two wrong turns earlier in this project. It's built to be easy to correct in one place, but the first real fog puzzle imported should be checked carefully.
+
 **Desktop app conversion.** The app now runs as a real Windows desktop application with its own window and title bar, rather than a browser tab — which also cleaned up some networking issues that only came up when running in a browser.
 
 ## Not started yet / left to do

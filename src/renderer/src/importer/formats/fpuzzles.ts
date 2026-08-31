@@ -3,8 +3,10 @@ import {
   createEmptyGrid,
   type CellRef,
   type Constraint,
+  type FogLight,
   type PuzzleModel,
 } from "../../model/types";
+import { fogImportNotes } from "../../state/fog";
 
 function parseCellRef(ref: string): CellRef {
   const m = /^R(\d+)C(\d+)$/i.exec(ref.trim());
@@ -145,6 +147,7 @@ const KNOWN_KEYS = new Set([
   "littlekillersum", "xv", "sandwichsum", "extraregion",
   "clone", "quadruple", "minimum", "maximum",
   "diagonal+", "diagonal-", "nonconsecutive",
+  "fogofwar", "foglight",
 ]);
 
 /**
@@ -433,6 +436,28 @@ export function parseFPuzzles(raw: unknown): PuzzleModel {
     });
   }
 
+  // --- fog of war ---
+  // Two separate keys, both lists of "R1C1" refs, and they mean different
+  // sizes of light: `fogofwar` cells light the 3x3 around themselves,
+  // `foglight` cells light only themselves. Confirmed against sudocle's
+  // fpuzzlesconverter.ts, which is the only written-down account of this
+  // pair either format has. `fog` is set whenever EITHER key is present,
+  // including when the list is empty -- an empty list is a puzzle that
+  // starts fully covered, not a puzzle without fog.
+  let fogLights: FogLight[] | undefined;
+  const addFogLights = (key: string, size: 1 | 3) => {
+    if (!Array.isArray(obj[key])) return;
+    fogLights ??= [];
+    const lights = fogLights;
+    tryParse(key, () => {
+      for (const ref of obj[key] as unknown[]) {
+        lights.push({ cell: parseCellRef(String(ref)), size });
+      }
+    });
+  };
+  addFogLights("fogofwar", 3);
+  addFogLights("foglight", 1);
+
   if (obj.antiknight === true) globalRules.antiKnight = true;
   if (obj.antiking === true) globalRules.antiKing = true;
   if (obj.disjointgroups === true) globalRules.disjointGroups = true;
@@ -458,8 +483,11 @@ export function parseFPuzzles(raw: unknown): PuzzleModel {
     }
   }
 
+  if (fogLights) importNotes.push(...fogImportNotes(solution !== undefined));
+
   return {
     size,
+    fog: fogLights ? { lights: fogLights } : undefined,
     irregularRegions: irregularRegions ? true : undefined,
     importNotes: importNotes.length > 0 ? importNotes : undefined,
     title: typeof obj.title === "string" ? obj.title : undefined,

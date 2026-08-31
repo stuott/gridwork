@@ -16,7 +16,8 @@
     "test:scl": "tsx scripts/smoke-test-scl.ts",
     "test:selection": "tsx scripts/smoke-test-selection.ts",
     "test:board": "tsx scripts/smoke-test-board.ts",
-    "test": "npm run typecheck && npm run test:importer && npm run test:scl && npm run test:validate && npm run test:phase4 && npm run test:selection && npm run test:board"
+    "test:fog": "tsx scripts/smoke-test-fog.ts",
+    "test": "npm run typecheck && npm run test:importer && npm run test:scl && npm run test:validate && npm run test:phase4 && npm run test:selection && npm run test:board && npm run test:fog"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
