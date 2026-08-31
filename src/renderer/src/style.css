@@ -1,0 +1,1328 @@
+/* ==========================================================================
+   Theme tokens
+   Six themes total: {cool, warm, nebula} x {light, dark}, switched via
+   data-theme="<family>-<mode>" on <html> (see theme.ts / ui/settingsModal.ts).
+   :root holds the cool-light palette as the default/fallback so the app
+   still looks right for an instant before JS applies the saved preference.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+  --paper: #f5f8fc;
+  --surface: #ffffff;
+  --border: #cbd5e1;
+  --ink: #16233b;
+  --muted: #5b6b85;
+  --line: #2c3e5c;
+  --thin-line: #9db0c9;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --given: #101826;
+  --selected: #bfdbfe;
+  --peer: #e7eefc;
+  --conflict: #fca5a5;
+  --conflict-strong: #ef4444;
+  --pencil: #64748b;
+  --cage-line: #475569;
+  --marker-ink: #334155;
+  --thermo: #b9c6da;
+  --arrow: #93a5c2;
+  --odd-even-marker: #dbe4f3;
+  --success: #15803d;
+  --error-bg: #fee2e2;
+  --error-text: #991b1b;
+  --error-border: #fca5a5;
+  --overlay: rgba(15, 23, 42, 0.5);
+  --renban: #c026d3;
+  --whisper: #16a34a;
+
+  /* Phase 4 solving-assist toolkit: fixed, non-theme-derived colors for the
+     user's own cell highlighting, so they read the same across all six
+     themes -- see model/types.ts's HIGHLIGHT_COLORS and design.md 6.3. */
+  --hl-red: rgba(239, 68, 68, 0.4);
+  --hl-orange: rgba(249, 115, 22, 0.4);
+  --hl-yellow: rgba(234, 179, 8, 0.42);
+  --hl-green: rgba(34, 197, 94, 0.38);
+  --hl-blue: rgba(59, 130, 246, 0.38);
+  --hl-purple: rgba(168, 85, 247, 0.38);
+  --hint-cell: rgba(34, 197, 94, 0.45);
+  --hint-elimination-cell: rgba(234, 179, 8, 0.35);
+
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+[data-theme="cool-dark"] {
+  color-scheme: dark;
+  --paper: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  --line: #64748b;
+  --thin-line: #334155;
+  --accent: #60a5fa;
+  --accent-contrast: #0b1220;
+  --given: #f1f5f9;
+  --selected: #1e3a5f;
+  --peer: #16233d;
+  --conflict: #7f2f2f;
+  --conflict-strong: #ef4444;
+  --pencil: #94a3b8;
+  --cage-line: #94a3b8;
+  --marker-ink: #cbd5e1;
+  --thermo: #475569;
+  --arrow: #7d8ba3;
+  --odd-even-marker: #334155;
+  --success: #4ade80;
+  --error-bg: #451a1a;
+  --error-text: #fca5a5;
+  --error-border: #7f1d1d;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --renban: #e879f9;
+  --whisper: #4ade80;
+}
+
+[data-theme="warm-light"] {
+  color-scheme: light;
+  --paper: #fdf8f0;
+  --surface: #fffaf2;
+  --border: #e7d3b0;
+  --ink: #3b2a1a;
+  --muted: #7a6650;
+  --line: #6b4a2e;
+  --thin-line: #d9c4a3;
+  --accent: #c2540c;
+  --accent-contrast: #ffffff;
+  --given: #2a1c0f;
+  --selected: #ffdca8;
+  --peer: #fbeee0;
+  --conflict: #f3b7a8;
+  --conflict-strong: #c0392b;
+  --pencil: #8a6f52;
+  --cage-line: #8a5a2e;
+  --marker-ink: #6b4a2e;
+  --thermo: #e8d2ab;
+  --arrow: #c9a877;
+  --odd-even-marker: #f3e0c0;
+  --success: #4d7c0f;
+  --error-bg: #fde2df;
+  --error-text: #9a3412;
+  --error-border: #f3b7a8;
+  --overlay: rgba(43, 27, 10, 0.5);
+  --renban: #b83280;
+  --whisper: #4d7c0f;
+}
+
+[data-theme="warm-dark"] {
+  color-scheme: dark;
+  --paper: #241a10;
+  --surface: #2b1d10;
+  --border: #4a3520;
+  --ink: #f5e6d3;
+  --muted: #c2a37c;
+  --line: #c99a5e;
+  --thin-line: #4a3520;
+  --accent: #f59e0b;
+  --accent-contrast: #241a10;
+  --given: #fff3e0;
+  --selected: #5a3c14;
+  --peer: #2e2010;
+  --conflict: #6b2f22;
+  --conflict-strong: #f0653e;
+  --pencil: #c2a37c;
+  --cage-line: #d1a35f;
+  --marker-ink: #f0d9b5;
+  --thermo: #5a4020;
+  --arrow: #8a6a3e;
+  --odd-even-marker: #4a3520;
+  --success: #a3e635;
+  --error-bg: #3a1410;
+  --error-text: #fca5a5;
+  --error-border: #7c2d12;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --renban: #f0abfc;
+  --whisper: #a3e635;
+}
+
+[data-theme="nebula-light"] {
+  color-scheme: light;
+  --paper: #f4f1ff;
+  --surface: #ffffff;
+  --border: #ddd6fe;
+  --ink: #241b3d;
+  --muted: #6b5b95;
+  --line: #6d28d9;
+  --thin-line: #c4b5fd;
+  --accent: #7c3aed;
+  --accent-contrast: #ffffff;
+  --given: #1e1b3a;
+  --selected: #ddd6fe;
+  --peer: #ede9fe;
+  --conflict: #fbc7d4;
+  --conflict-strong: #db2777;
+  --pencil: #8b7cc4;
+  --cage-line: #a78bfa;
+  --marker-ink: #5b21b6;
+  --thermo: #c4b5fd;
+  --arrow: #a78bfa;
+  --odd-even-marker: #ede9fe;
+  --success: #059669;
+  --error-bg: #ffe4e6;
+  --error-text: #9f1239;
+  --error-border: #fda4af;
+  --overlay: rgba(30, 20, 64, 0.55);
+  --renban: #db2777;
+  --whisper: #059669;
+}
+
+[data-theme="nebula-dark"] {
+  color-scheme: dark;
+  --paper: #0b0620;
+  --surface: #150c2e;
+  --border: #3b2a5c;
+  --ink: #e9e4ff;
+  --muted: #a78bda;
+  --line: #8b5cf6;
+  --thin-line: #3b2a5c;
+  --accent: #22d3ee;
+  --accent-contrast: #071018;
+  --given: #f5f3ff;
+  --selected: #4c1d95;
+  --peer: #1e1440;
+  --conflict: #5c1030;
+  --conflict-strong: #f472b6;
+  --pencil: #a78bda;
+  --cage-line: #c084fc;
+  --marker-ink: #f0abfc;
+  --thermo: #6d28d9;
+  --arrow: #f472b6;
+  --odd-even-marker: #2e1a5c;
+  --success: #34d399;
+  --error-bg: #3f0d24;
+  --error-text: #fb7185;
+  --error-border: #881337;
+  --overlay: rgba(0, 0, 0, 0.7);
+  --renban: #f472b6;
+  --whisper: #34d399;
+}
+
+/* ==========================================================================
+   Base layout
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ==========================================================================
+   Custom titlebar (frameless window -- see src/main/index.ts, titlebar.ts)
+   ========================================================================== */
+
+.titlebar {
+  flex: 0 0 auto;
+  display: flex;
+  height: 32px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  /* Makes the whole strip draggable so the frameless window can still be
+     moved -- and, on Windows, double-clicked to maximize/restore for free. */
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.titlebar-left {
+  display: flex;
+  flex: 0 0 auto;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-drag {
+  flex: 1 1 auto;
+}
+
+.titlebar-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.titlebar-btn:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.titlebar-btn:active {
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.titlebar-btn-close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.titlebar-btn-close:active {
+  background: #f1707a;
+  color: #fff;
+}
+
+#app {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.app-shell {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.import-form {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.import-form input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.import-form button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.import-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.import-error {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+
+.import-history {
+  margin-bottom: 16px;
+  max-width: 60ch;
+}
+
+.import-history-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.import-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.import-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-history-open {
+  flex: 1;
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-history-open:hover {
+  border-color: var(--accent);
+}
+
+.import-history-when {
+  font-size: 0.8rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.import-history-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.import-history-remove:hover {
+  color: var(--conflict-strong);
+}
+
+/* ==========================================================================
+   Board
+   ========================================================================== */
+
+.board-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.board-header {
+  font-weight: 600;
+}
+
+.board-rules {
+  max-width: 60ch;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--surface);
+}
+
+.board-rules summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.board-rules-text {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   Control bar + icon buttons
+
+   The board's actions used to be three stacked rows of text buttons mixed
+   with loose checkboxes. Now: one bar with icon buttons on the left and the
+   timer/zoom readouts pushed right, with the two checkboxes moved into the
+   settings modal's Verification tab.
+   -------------------------------------------------------------------------- */
+
+.board-controlbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.board-controlbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.board-toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 6px;
+  background: var(--border);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.icon-btn.icon-only {
+  padding: 6px;
+  min-width: 30px;
+}
+
+.icon-btn .icon {
+  flex-shrink: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border-color: var(--border);
+}
+
+.icon-btn:active:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.icon-btn.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.icon-btn.active:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 16%, transparent);
+  border-color: color-mix(in srgb, #ef4444 45%, transparent);
+  color: #ef4444;
+}
+
+.sudoku-svg {
+  /* Explicit width/height are set per-render from the zoom level
+     (render/board.ts) so zooming in actually grows the board inside its
+     scrollable wrapper (.board-scroll-wrap) instead of being capped back
+     down to the container's width. */
+  display: block;
+  background: var(--surface);
+  /* Drag-to-select owns the pointer on the board, so the browser must not
+     claim the gesture for panning/zooming, and dragging across cells must not
+     start a text selection. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cell-bg {
+  fill: var(--surface);
+  cursor: pointer;
+}
+
+.cell-bg.peer {
+  fill: var(--peer);
+}
+
+.cell-bg.selected {
+  fill: var(--selected);
+}
+
+.cell-bg.conflict {
+  fill: var(--conflict);
+}
+
+.cell-bg.selected.conflict {
+  fill: var(--conflict-strong);
+}
+
+/* Perimeter of the current selection (render/board.ts drawSelectionOutline).
+   Drawn over the grid lines so a multi-cell selection stays readable on top of
+   highlight colors, cages and thermos. */
+.selection-edge {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: square;
+  pointer-events: none;
+}
+
+.grid-line-thin {
+  stroke: var(--thin-line);
+  stroke-width: 1;
+}
+
+.grid-line-thick {
+  stroke: var(--line);
+  stroke-width: 3;
+}
+
+.given-digit {
+  fill: var(--given);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.value-digit {
+  fill: var(--accent);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.pencil-mark {
+  fill: var(--pencil);
+  pointer-events: none;
+}
+
+.cage-line {
+  stroke: var(--cage-line);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  fill: none;
+}
+
+.cage-sum {
+  fill: var(--marker-ink);
+  pointer-events: none;
+}
+
+/* scl/ctc decorations (render/board.ts drawDecorations). Every visual
+   property -- stroke, fill, width -- comes inline from the puzzle payload,
+   since the whole point is reproducing SudokuPad's own appearance. The only
+   thing that must live here is pointer-events: these shapes are drawn on
+   top of the clickable cell backgrounds, so without this they would swallow
+   cell clicks and the board would go dead wherever a line crosses it. */
+.scl-decoration-line,
+.scl-decoration-overlay {
+  pointer-events: none;
+}
+
+.thermo-line {
+  stroke: var(--thermo);
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.thermo-bulb {
+  fill: var(--thermo);
+}
+
+.arrow-line {
+  stroke: var(--arrow);
+  stroke-width: 2;
+  fill: none;
+}
+
+.arrow-head {
+  fill: var(--arrow);
+}
+
+.arrow-circle {
+  fill: var(--surface);
+  stroke: var(--arrow);
+  stroke-width: 2;
+}
+
+.kropki-ratio {
+  fill: var(--surface);
+  stroke: var(--marker-ink);
+  stroke-width: 1.5;
+}
+
+.kropki-difference {
+  fill: var(--marker-ink);
+}
+
+.odd-marker {
+  fill: var(--odd-even-marker);
+}
+
+.even-marker {
+  fill: var(--odd-even-marker);
+}
+
+/* ==========================================================================
+   Phase 5: remaining variant coverage
+   Renban/whisper/palindrome lines, between lines, little killer sums, XV,
+   sandwich sums, extra regions, clones, quadruples, min/max cells, and the
+   two diagonals -- see design.md section 6.2/Phase 5 and model/types.ts.
+   ========================================================================== */
+
+.renban-line {
+  stroke: var(--renban);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0.75;
+}
+
+.whisper-line {
+  stroke: var(--whisper);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0.85;
+}
+
+.palindrome-line {
+  stroke: var(--arrow);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0.6;
+}
+
+.between-line {
+  stroke: var(--thin-line);
+  stroke-width: 2;
+  fill: none;
+}
+
+.between-line-bulb {
+  fill: var(--surface);
+  stroke: var(--marker-ink);
+  stroke-width: 1.5;
+}
+
+.xv-marker-bg {
+  fill: var(--surface);
+  stroke: var(--marker-ink);
+  stroke-width: 1.5;
+}
+
+.xv-marker-text {
+  fill: var(--marker-ink);
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.minmax-min,
+.minmax-max {
+  fill: var(--accent);
+  opacity: 0.8;
+}
+
+.quadruple-circle {
+  fill: var(--surface);
+  stroke: var(--marker-ink);
+  stroke-width: 1.5;
+}
+
+.quadruple-text {
+  fill: var(--marker-ink);
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.little-killer-sum,
+.sandwich-sum {
+  fill: var(--marker-ink);
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.little-killer-arrow {
+  stroke: var(--arrow);
+  fill: var(--arrow);
+  stroke-width: 1.5;
+}
+
+.extra-region-cell {
+  fill: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  pointer-events: none;
+}
+
+.clone-marker {
+  fill: var(--cage-line);
+  opacity: 0.85;
+}
+
+.diagonal-line {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  opacity: 0.35;
+}
+
+.board-status {
+  min-height: 1.4em;
+  font-size: 0.95rem;
+}
+
+.board-status.has-conflicts {
+  color: var(--conflict-strong);
+}
+
+.board-status.solved {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.board-notes {
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+/* ==========================================================================
+   Phase 4: solving-assist toolkit
+   Timer, undo/redo, colored cell highlighting, hints, on-demand mistake
+   checking, and zoom -- see design.md section 6.3.
+   ========================================================================== */
+
+.board-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.timer-display {
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  color: var(--ink);
+  min-width: 3.5em;
+}
+
+.resume-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.board-resume-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--peer);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.board-resume-note[hidden] {
+  display: none;
+}
+
+.resume-note-dismiss {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zoom-level {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 3.5em;
+  text-align: center;
+}
+
+.board-scroll-wrap {
+  max-width: 100%;
+  max-height: 75vh;
+  overflow: auto;
+  border-radius: 6px;
+  /* The board is the thing you look at, so it sits centered in the column even
+     though the header/toolbar above it stay left-aligned. When the board is
+     wider than the column this is a no-op and the wrapper just scrolls. */
+  align-self: center;
+}
+
+.highlight-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.highlight-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.highlight-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+}
+
+.highlight-swatch.active {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--ink);
+}
+
+.highlight-swatch.hl-red { background: #ef4444; }
+.highlight-swatch.hl-orange { background: #f97316; }
+.highlight-swatch.hl-yellow { background: #eab308; }
+.highlight-swatch.hl-green { background: #22c55e; }
+.highlight-swatch.hl-blue { background: #3b82f6; }
+.highlight-swatch.hl-purple { background: #a855f7; }
+
+.highlight-clear-btn {
+  margin-left: 4px;
+  color: var(--muted);
+}
+
+.cell-highlight {
+  pointer-events: none;
+}
+
+.cell-highlight.hl-red { fill: var(--hl-red); }
+.cell-highlight.hl-orange { fill: var(--hl-orange); }
+.cell-highlight.hl-yellow { fill: var(--hl-yellow); }
+.cell-highlight.hl-green { fill: var(--hl-green); }
+.cell-highlight.hl-blue { fill: var(--hl-blue); }
+.cell-highlight.hl-purple { fill: var(--hl-purple); }
+
+.hint-cell {
+  fill: var(--hint-cell);
+  pointer-events: none;
+}
+
+.hint-elimination-cell {
+  fill: var(--hint-elimination-cell);
+  pointer-events: none;
+}
+
+.hint-panel {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--surface);
+  max-width: 60ch;
+}
+
+.hint-panel[hidden] {
+  display: none;
+}
+
+.hint-technique {
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.hint-message {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.hint-dismiss {
+  align-self: flex-start;
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   Settings modal
+   ========================================================================== */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+
+.settings-overlay[hidden] {
+  display: none;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.settings-header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.settings-close {
+  color: var(--muted);
+}
+
+.settings-close:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+/* --- tabs (Theme / Verification) --- */
+
+.settings-tablist {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+
+.settings-tab:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.settings-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.settings-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.settings-tabpanel[hidden] {
+  display: none;
+}
+
+.settings-tabpanel {
+  padding-top: 4px;
+}
+
+/* --- verification checkbox rows --- */
+
+.settings-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.settings-check-row:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.settings-checkbox {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-check-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.settings-check-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.settings-section {
+  margin-top: 18px;
+}
+
+.settings-section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.theme-swatch-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.theme-swatch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.theme-swatch:hover {
+  border-color: var(--accent);
+}
+
+.theme-swatch.active {
+  border-color: var(--accent);
+  background: var(--peer);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.theme-preview {
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.theme-preview .swatch-half {
+  flex: 1;
+}
+
+.theme-preview .swatch-accent-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.theme-preview-cool .swatch-light { background: #eef4ff; }
+.theme-preview-cool .swatch-dark { background: #0f172a; }
+.theme-preview-cool .swatch-accent-dot { background: #2563eb; }
+
+.theme-preview-warm .swatch-light { background: #fdf1de; }
+.theme-preview-warm .swatch-dark { background: #241a10; }
+.theme-preview-warm .swatch-accent-dot { background: #c2540c; }
+
+.theme-preview-nebula .swatch-light { background: #ede8ff; }
+.theme-preview-nebula .swatch-dark { background: #120a2b; }
+.theme-preview-nebula .swatch-accent-dot { background: #22d3ee; }
+
+.theme-swatch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-swatch-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.theme-swatch-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.experimental-tag {
+  margin-left: 8px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: linear-gradient(90deg, #7c3aed, #22d3ee);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+/* ==========================================================================
+   Nebula flourish (the "experimental" theme)
+   Soft drifting aurora background + a light glow on filled digits and the
+   selected cell. Kept subtle, and switched off for reduced-motion users.
+   ========================================================================== */
+
+[data-theme^="nebula"] body {
+  background-image:
+    radial-gradient(700px circle at 12% -10%, rgba(124, 58, 237, 0.16), transparent 60%),
+    radial-gradient(600px circle at 110% 10%, rgba(34, 211, 238, 0.14), transparent 55%),
+    radial-gradient(800px circle at 50% 120%, rgba(244, 114, 182, 0.10), transparent 60%);
+  background-attachment: fixed;
+  background-size: 140% 140%;
+  animation: nebula-drift 30s ease-in-out infinite alternate;
+}
+
+[data-theme="nebula-dark"] body {
+  background-image:
+    radial-gradient(700px circle at 12% -10%, rgba(139, 92, 246, 0.28), transparent 60%),
+    radial-gradient(600px circle at 110% 10%, rgba(34, 211, 238, 0.22), transparent 55%),
+    radial-gradient(800px circle at 50% 120%, rgba(244, 114, 182, 0.16), transparent 60%);
+}
+
+@keyframes nebula-drift {
+  from { background-position: 0% 0%, 100% 0%, 50% 100%; }
+  to { background-position: 8% 6%, 92% 8%, 46% 92%; }
+}
+
+[data-theme^="nebula"] #titlebar-settings-btn:hover,
+[data-theme^="nebula"] .import-form button {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+[data-theme="nebula-dark"] .cell-bg.selected {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 65%, transparent));
+}
+
+[data-theme="nebula-dark"] .value-digit {
+  filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--accent) 60%, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme^="nebula"] body {
+    animation: none;
+  }
+}
+
+@media (min-width: 480px) {
+  .theme-swatch-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
