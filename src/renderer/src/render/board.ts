@@ -1,9 +1,11 @@
 import {
   boxDims,
+  boxesAreChecked,
   cellRefToIndex,
   HIGHLIGHT_COLORS,
   type CellRef,
   type PuzzleModel,
+  type SclDecorationArrow,
   type SclDecorationOverlay,
 } from "../model/types";
 import { findConflicts, conflictCellKeySet, type Conflict } from "../solver/validate";
@@ -331,7 +333,8 @@ export class SudokuBoard {
     const shapeCount = model.decorations
       ? model.decorations.lines.length +
         model.decorations.overlays.length +
-        model.decorations.underlays.length
+        model.decorations.underlays.length +
+        model.decorations.arrows.length
       : 0;
     if (shapeCount > 0) {
       noteLines.push(
@@ -431,7 +434,7 @@ export class SudokuBoard {
     const consider = (row: number, col: number, pad: number) => {
       overhang = Math.max(overhang, pad - row, pad - col, row - size + pad, col - size + pad);
     };
-    for (const line of deco.lines) {
+    for (const line of [...deco.lines, ...deco.arrows]) {
       const half = (line.thickness ?? 0) / 2;
       for (const [r, c] of line.wayPoints) consider(r, c, half);
     }
@@ -804,7 +807,8 @@ export class SudokuBoard {
           !isSelected &&
           (solePeerSource.r === r ||
             solePeerSource.c === c ||
-            (Math.floor(solePeerSource.r / boxH) === Math.floor(r / boxH) &&
+            (boxesAreChecked(model) &&
+              Math.floor(solePeerSource.r / boxH) === Math.floor(r / boxH) &&
               Math.floor(solePeerSource.c / boxW) === Math.floor(c / boxW)));
         const classes = ["cell-bg"];
         if (isSelected) classes.push("selected");
@@ -863,8 +867,12 @@ export class SudokuBoard {
     this.drawSandwiches(svg);
 
     // --- grid lines (thin, then thick box borders on top) ---
+    // A jigsaw puzzle's boxes are not its regions, so drawing box outlines
+    // would show the solver a layout the puzzle doesn't have. Only the
+    // outer border stays heavy there. See PuzzleModel.irregularRegions.
+    const showBoxLines = boxesAreChecked(model);
     for (let i = 0; i <= size; i++) {
-      const thick = i % boxH === 0;
+      const thick = showBoxLines ? i % boxH === 0 : i === 0 || i === size;
       svg.appendChild(
         this.el("line", {
           x1: this.gx(0),
@@ -876,7 +884,7 @@ export class SudokuBoard {
       );
     }
     for (let i = 0; i <= size; i++) {
-      const thick = i % boxW === 0;
+      const thick = showBoxLines ? i % boxW === 0 : i === 0 || i === size;
       svg.appendChild(
         this.el("line", {
           x1: this.gx(i),
@@ -1274,7 +1282,61 @@ export class SudokuBoard {
       svg.appendChild(this.el("polyline", attrs));
     }
 
+    for (const a of deco.arrows) this.drawDecorationArrow(svg, a);
+
     for (const o of deco.overlays) this.drawDecorationShape(svg, o);
+  }
+
+  /**
+   * Draws one scl `arrows` entry: the way-point path, plus an arrowhead on
+   * the last segment. The head is two straight strokes rather than an SVG
+   * marker so it inherits the path's own color and thickness without a
+   * per-color <marker> def, and so it scales with the board's zoom like
+   * everything else here.
+   */
+  private drawDecorationArrow(svg: SVGSVGElement, a: SclDecorationArrow) {
+    const px = (col: number) => this.margin + col * CELL;
+    const py = (row: number) => this.margin + row * CELL;
+    const stroke = a.color ?? "currentColor";
+    const strokeWidth = (a.thickness ?? 0.02) * CELL;
+
+    svg.appendChild(
+      this.el("polyline", {
+        points: a.wayPoints.map(([r, c]) => `${px(c)},${py(r)}`).join(" "),
+        class: "scl-decoration-line",
+        fill: "none",
+        stroke,
+        "stroke-width": strokeWidth,
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      }),
+    );
+
+    const tip = a.wayPoints[a.wayPoints.length - 1]!;
+    const prev = a.wayPoints[a.wayPoints.length - 2]!;
+    const dx = px(tip[1]) - px(prev[1]);
+    const dy = py(tip[0]) - py(prev[0]);
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-9) return; // zero-length final segment: no direction to point in
+    const angle = Math.atan2(dy, dx);
+    const head = (a.headLength ?? 0.3) * CELL;
+    // SudokuPad's arrowheads are a shallow open "V", not a filled triangle.
+    const spread = Math.PI / 6;
+    for (const side of [-1, 1]) {
+      svg.appendChild(
+        this.el("line", {
+          x1: px(tip[1]),
+          y1: py(tip[0]),
+          x2: px(tip[1]) - head * Math.cos(angle + side * spread),
+          y2: py(tip[0]) - head * Math.sin(angle + side * spread),
+          class: "scl-decoration-line",
+          fill: "none",
+          stroke,
+          "stroke-width": strokeWidth,
+          "stroke-linecap": "round",
+        }),
+      );
+    }
   }
 
   /** Draws one scl overlay/underlay shape (they share a shape vocabulary; only their stacking order differs). */
@@ -1316,7 +1378,27 @@ export class SudokuBoard {
     if (o.angle) {
       shape.setAttribute("transform", `rotate(${o.angle} ${cx} ${cy})`);
     }
-    svg.appendChild(shape);
+    // A bare label (a cage sum, a little-killer clue) arrives with no size
+    // at all; drawing a 0x0 rect behind it would add a stray dot.
+    if (o.width > 0 || o.height > 0) svg.appendChild(shape);
+
+    if (o.text === undefined) return;
+    // Every number/letter SudokuPad puts on a board that isn't a grid digit
+    // comes through here. Default size is half a cell: that is what an
+    // uncramped cage sum looks like, and it stays legible when the source
+    // omits fontSize entirely.
+    const label = this.el("text", {
+      x: cx,
+      y: cy,
+      class: "scl-decoration-text",
+      "text-anchor": "middle",
+      "dominant-baseline": "central",
+      "font-size": (o.fontSize ?? 0.5) * CELL,
+      fill: o.color ?? "currentColor",
+    });
+    label.textContent = o.text;
+    if (o.angle) label.setAttribute("transform", `rotate(${o.angle} ${cx} ${cy})`);
+    svg.appendChild(label);
   }
 
   private drawDiagonals(svg: SVGSVGElement) {

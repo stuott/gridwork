@@ -211,6 +211,95 @@ check(
 );
 
 // ---------------------------------------------------------------------------
+// Case 3b: arrows, overlay text, and the jigsaw guard
+// (audit-2026-08-31 issues 1-3). All three were silent losses: `arrows` was
+// never parsed or drawn, overlay `text` was dropped so every cage sum and
+// X/V letter rendered as an empty shape, and an irregular `regions` array
+// was reported but didn't actually stop the box checks.
+// ---------------------------------------------------------------------------
+const withArrows = parseScl({
+  cells: [[{}, {}], [{}, {}]],
+  cellSize: 64,
+  arrows: [
+    { wayPoints: [[0.5, 0.5], [0.5, 1.5]], color: "#000000", thickness: 6.4, headLength: 19.2 },
+    { wayPoints: [[1.5, 0.5]] }, // single point: nothing drawable
+  ],
+  overlays: [
+    { center: [0, 0], width: 0.25, height: 0.25, text: "12", fontSize: 32 },
+    { center: [1, 1], text: "X" }, // a bare label, no width/height at all
+  ],
+});
+check("[arrows] the arrows array is parsed into decorations", withArrows.decorations?.arrows.length === 1);
+check(
+  "[arrows] thickness is normalized to a fraction of one cell, like lines",
+  Math.abs((withArrows.decorations!.arrows[0]!.thickness ?? 0) - 0.1) < 1e-9,
+);
+check(
+  "[arrows] headLength given in cellSize units is normalized to 0.3 of a cell",
+  Math.abs((withArrows.decorations!.arrows[0]!.headLength ?? 0) - 0.3) < 1e-9,
+);
+check(
+  '[arrows] "arrows" is no longer reported as an unsupported constraint',
+  !withArrows.constraints.some((c) => c.type === "unsupported" && c.sourceKey === "arrows"),
+);
+check(
+  "[text] overlay text is kept",
+  withArrows.decorations!.overlays.map((o) => o.text ?? "").join(",") === "12,X",
+);
+check(
+  "[text] fontSize in cellSize units is normalized to a fraction of one cell",
+  Math.abs((withArrows.decorations!.overlays[0]!.fontSize ?? 0) - 0.5) < 1e-9,
+);
+check(
+  "[text] a text overlay with no width/height survives instead of being dropped",
+  withArrows.decorations!.overlays.length === 2 && withArrows.decorations!.overlays[1]!.width === 0,
+);
+
+// The same two fields written as plain cell fractions must read the same way
+// -- payloads disagree on the scale, so scl.ts normalizes by magnitude.
+const fractionScale = parseScl({
+  cells: [[{}, {}], [{}, {}]],
+  arrows: [{ wayPoints: [[0.5, 0.5], [0.5, 1.5]], headLength: 0.3 }],
+  overlays: [{ center: [0, 0], width: 0.25, height: 0.25, text: "12", fontSize: 0.5 }],
+});
+check(
+  "[arrows/text] values already given as cell fractions are left alone",
+  Math.abs((fractionScale.decorations!.arrows[0]!.headLength ?? 0) - 0.3) < 1e-9 &&
+    Math.abs((fractionScale.decorations!.overlays[0]!.fontSize ?? 0) - 0.5) < 1e-9,
+);
+
+const jigsawScl = parseScl({
+  cells: [[{}, {}, {}, {}], [{}, {}, {}, {}], [{}, {}, {}, {}], [{}, {}, {}, {}]],
+  regions: [
+    [[0, 0], [0, 1], [0, 2], [1, 0]],
+    [[0, 3], [1, 1], [1, 2], [1, 3]],
+    [[2, 0], [2, 1], [3, 0], [3, 1]],
+    [[2, 2], [2, 3], [3, 2], [3, 3]],
+  ],
+});
+check("[jigsaw] an irregular regions array sets irregularRegions", jigsawScl.irregularRegions === true);
+check(
+  "[jigsaw] the solver is told region checking is off, not just that regions are unsupported",
+  (jigsawScl.importNotes ?? []).some((n) => n.includes("jigsaw") && n.includes("rows and columns only")),
+);
+check(
+  "[jigsaw] regions restating the default boxes still don't set the flag",
+  parseScl({
+    cells: [[{}, {}, {}, {}], [{}, {}, {}, {}], [{}, {}, {}, {}], [{}, {}, {}, {}]],
+    regions: [
+      [[0, 0], [0, 1], [1, 0], [1, 1]],
+      [[0, 2], [0, 3], [1, 2], [1, 3]],
+      [[2, 0], [2, 1], [3, 0], [3, 1]],
+      [[2, 2], [2, 3], [3, 2], [3, 3]],
+    ],
+  }).irregularRegions === undefined,
+);
+check(
+  "[jigsaw] an empty regions array is not an irregular layout",
+  parseScl({ cells: [[{}, {}], [{}, {}]], regions: [] }).irregularRegions === undefined,
+);
+
+// ---------------------------------------------------------------------------
 // Case 4: the un-shortening pass must never touch already-valid JSON.
 // ---------------------------------------------------------------------------
 // Its color-repair regex can't tell an unquoted color from an ordinary

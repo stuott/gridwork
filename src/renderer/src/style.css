@@ -297,6 +297,46 @@ body {
   overflow: auto;
 }
 
+/* ==========================================================================
+   Brand
+   The mark is drawn on stroke="currentColor" (titlebar.ts) so it inherits
+   --ink like every other icon -- no per-theme copies. Wordmark tracking is
+   negative on purpose: it packs the letters like cells in a row, which is
+   the whole idea of the name.
+   ========================================================================== */
+
+.titlebar-brand {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 4px 0 11px;
+  color: var(--ink);
+  /* Stays draggable: there's nothing to click here, so the brand doubles as
+     extra grab area for a frameless window whose drag strip is otherwise
+     just the gap in the middle. */
+}
+
+.titlebar-brand-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.app-header {
+  margin-bottom: 16px;
+}
+
+.app-header h1 {
+  letter-spacing: -0.03em;
+}
+
+.tagline {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .app-shell {
   max-width: 900px;
   margin: 0 auto;
@@ -646,8 +686,18 @@ h1 {
    top of the clickable cell backgrounds, so without this they would swallow
    cell clicks and the board would go dead wherever a line crosses it. */
 .scl-decoration-line,
-.scl-decoration-overlay {
+.scl-decoration-overlay,
+.scl-decoration-text {
   pointer-events: none;
+}
+
+/* Text drawn by an scl overlay (cage sums, X/V letters, little-killer
+   clues). Size and fill come from the payload; only the family and weight
+   are ours, so the label matches the board's own digits. */
+.scl-decoration-text {
+  font-family: inherit;
+  font-weight: 600;
+  user-select: none;
 }
 
 .thermo-line {

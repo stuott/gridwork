@@ -439,5 +439,33 @@ function reasonsOf(m: PuzzleModel): string[] {
   check("max cell: a larger neighbor, flagged", reasonsOf(m).some((r) => r.includes("greater than every neighbor")));
 }
 
+// --- irregular (jigsaw) regions: box checking must switch OFF entirely
+//     (audit-2026-08-31 issue 1). A jigsaw's boxes are not its regions, so
+//     a "Box: n repeated" here would be a conflict against a rule the
+//     puzzle doesn't have -- the exact silent mis-validation the guard in
+//     fpuzzles.ts/scl.ts was added to stop.
+{
+  const m = model(4);
+  m.grid[0]![0]!.value = 3;
+  m.grid[1]![1]!.value = 3; // same 2x2 box, different row and column
+  check("box duplicate is normally flagged", reasonsOf(m).some((r) => r.startsWith("Box")));
+  const jig: PuzzleModel = { ...m, irregularRegions: true };
+  check("irregular regions: no box conflict is reported", !reasonsOf(jig).some((r) => r.startsWith("Box")));
+  jig.grid[0]![2]!.value = 3;
+  check("irregular regions: rows and columns are still checked", reasonsOf(jig).some((r) => r.includes("Row 1")));
+}
+{
+  // Disjoint groups are defined by position *within a box*, so they go the
+  // same way as the boxes themselves.
+  const m = model(4, [], { disjointGroups: true });
+  m.grid[0]![0]!.value = 2;
+  m.grid[2]![2]!.value = 2; // same position in two different boxes
+  check("disjoint groups normally flagged", reasonsOf(m).some((r) => r.startsWith("Disjoint")));
+  check(
+    "irregular regions: disjoint groups switch off with the boxes",
+    !reasonsOf({ ...m, irregularRegions: true }).some((r) => r.startsWith("Disjoint")),
+  );
+}
+
 console.log(failed ? "\nSMOKE TEST: FAILED" : "\nSMOKE TEST: ALL PASSED");
 if (failed) process.exit(1);

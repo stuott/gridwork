@@ -1,4 +1,5 @@
 import {
+  boxDims,
   createEmptyGrid,
   type CellRef,
   type Constraint,
@@ -83,6 +84,59 @@ function sandwichPath(clue: CellRef, size: number): CellRef[] {
   return cells;
 }
 
+/**
+ * True when this payload declares an irregular (jigsaw) region layout.
+ *
+ * f-puzzles records regions as a per-cell `region` index on
+ * `grid[r][c]` -- the same field dclamage/SolverFactory reads to build its
+ * groups -- and an ordinary puzzle either omits it entirely or writes out
+ * the index its default box already has. This parser previously never
+ * looked at the field at all, so a jigsaw imported clean and was then
+ * conflict-checked against 3x3 boxes that are not its regions, with no
+ * warning anywhere (audit-2026-08-31 issue 1). scl.ts already guarded the
+ * equivalent case via its own regionsAreDefaultBoxes.
+ *
+ * The comparison is deliberately *partition* equality, not index equality:
+ * a puzzle that numbers its ordinary boxes in some other order is still an
+ * ordinary puzzle, and flagging it would switch box-checking off on a
+ * normal grid. So each region id's cell set must be exactly one default
+ * box; anything else -- a partial `region` field, the wrong number of
+ * groups, a group that straddles two boxes, or a grid size with no default
+ * box layout to compare against -- reads as irregular, which is the safe
+ * direction to be wrong in.
+ */
+function hasIrregularRegions(rawGrid: unknown, size: number): boolean {
+  if (!Array.isArray(rawGrid)) return false;
+  const groups = new Map<number, Array<[number, number]>>();
+  let withRegion = 0;
+  for (let r = 0; r < size; r++) {
+    const row = (rawGrid as unknown[])[r];
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < size; c++) {
+      const cd = (row as unknown[])[c] as Record<string, unknown> | null | undefined;
+      if (!cd || typeof cd !== "object") continue;
+      const region = asNumber(cd.region);
+      if (region === undefined) continue;
+      withRegion++;
+      groups.set(region, [...(groups.get(region) ?? []), [r, c]]);
+    }
+  }
+  if (groups.size === 0) return false; // no region data at all: an ordinary puzzle
+  const { boxW, boxH } = boxDims(size);
+  if (boxW >= size) return true; // nothing to compare against, so we can't confirm it's ordinary
+  if (withRegion !== size * size) return true; // partial region data isn't readable
+  if (groups.size !== size) return true;
+  const seen = new Set<string>();
+  for (const cells of groups.values()) {
+    if (cells.length !== size) return true;
+    const band = `${Math.floor(cells[0]![0] / boxH)},${Math.floor(cells[0]![1] / boxW)}`;
+    if (!cells.every(([r, c]) => `${Math.floor(r / boxH)},${Math.floor(c / boxW)}` === band)) return true;
+    if (seen.has(band)) return true;
+    seen.add(band);
+  }
+  return false;
+}
+
 const KNOWN_KEYS = new Set([
   "size", "title", "author", "ruleset", "grid", "solution",
   "killercage", "thermometer", "arrow", "ratio", "difference",
@@ -148,6 +202,22 @@ export function parseFPuzzles(raw: unknown): PuzzleModel {
 
   const constraints: Constraint[] = [];
   const globalRules: PuzzleModel["globalRules"] = {};
+  const importNotes: string[] = [];
+
+  // Jigsaw guard -- see hasIrregularRegions. Reported to the user two ways:
+  // as an `unsupported` marker (so the board's "not validated" line names
+  // it) and as an import note saying plainly what is and isn't being
+  // checked, because "region" on its own doesn't tell a solver that box
+  // checking just went away.
+  const irregularRegions = hasIrregularRegions(obj.grid, size);
+  if (irregularRegions) {
+    constraints.push({ type: "unsupported", sourceKey: "region", raw: undefined });
+    importNotes.push(
+      "This puzzle has irregular (jigsaw) regions. This app can't read that layout yet, so it is checking " +
+        "rows and columns only — no region checking at all — rather than checking the ordinary boxes, which " +
+        "are not this puzzle's regions. Box outlines are hidden for the same reason.",
+    );
+  }
 
   const pushUnsupported = (key: string) => {
     constraints.push({ type: "unsupported", sourceKey: key, raw: obj[key] });
@@ -390,6 +460,8 @@ export function parseFPuzzles(raw: unknown): PuzzleModel {
 
   return {
     size,
+    irregularRegions: irregularRegions ? true : undefined,
+    importNotes: importNotes.length > 0 ? importNotes : undefined,
     title: typeof obj.title === "string" ? obj.title : undefined,
     author: typeof obj.author === "string" ? obj.author : undefined,
     ruleset: typeof obj.ruleset === "string" ? obj.ruleset : undefined,

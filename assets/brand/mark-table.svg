@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" role="img" aria-label="Gridwork">
+  <polygon points="13,13.33 19,13.33 19.67,19.67 12.33,19.67" fill="var(--accent, currentColor)" stroke="none" opacity=".38"/>
+  <path d="M13.67 7 11.67 26M18.33 7 20.33 26M7 13.33H25M5 19.67H27" stroke-width="1.5" opacity=".62"/>
+  <path d="M9 7H23L29 26H3Z" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

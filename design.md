@@ -479,17 +479,37 @@ imported from f-puzzles.com) may commonly use `scl`, which would make Phase
 Worth re-prioritizing once real usage (which links people actually paste)
 gives a better signal.
 
-### 7.4 Known gap: per-cell region overrides ("jigsaw" boxes) aren't modeled
+### 7.4 Known gap: jigsaw regions are detected and declined, not solved
 
 `FPuzzlesGridEntry` (in the same schema file) has a `region` field on every
 cell, letting a puzzle override the default 3x3 box shape per cell (jigsaw
 sudoku). This app's `boxDims()` helper and everything downstream of it
 (conflict validation, candidate computation, box grid-line rendering) assumes
-uniform `boxW x boxH` tiling and ignores per-cell `region` entirely. A jigsaw
-puzzle will import and render its grid/givens/other constraints correctly,
-but its box shading and box-uniqueness validation will be wrong. Not on the
-Phase 3/5 lists above -- adding it here as a gap worth its own line item
-whenever irregular-region puzzles come up.
+uniform `boxW x boxH` tiling, so it still cannot *solve against* an irregular
+layout.
+
+What changed on 2026-08-31 (audit issue 1) is that it no longer pretends
+otherwise. Both importers now read the layout well enough to answer one
+question -- "is this the ordinary box grid?" -- and set
+`PuzzleModel.irregularRegions` when it isn't: `fpuzzles.ts`'s
+`hasIrregularRegions()` from the per-cell `region` field, `scl.ts` from a
+non-empty `regions` array that its `regionsAreDefaultBoxes()` rejects. Both
+compare *partitions*, not region indexes, so an ordinary grid that numbers
+its boxes unusually is not mistaken for a jigsaw.
+
+When the flag is set, `boxesAreChecked()` (model/types.ts) returns false and
+every box-based path switches off together: box conflicts and disjoint
+groups in `validate.ts`, box elimination in `candidates.ts`, box units and
+pointing pairs in `hints.ts`, and the box outlines plus box peer-shading in
+`board.ts`. The puzzle is checked on rows and columns only, and an import
+note says so in as many words. That is CLAUDE.md's "never validate a rule the
+puzzle might not have": before this, a jigsaw imported clean, rendered with
+3x3 box lines it doesn't have, and was conflict-checked against regions that
+are not its own -- silently.
+
+Real jigsaw *support* (reading the region membership into the model and
+validating against it) is still open, and is the natural next step now that
+the layout is already being read.
 
 ### 7.5 Runtime interop note (doesn't affect the shipped app)
 
@@ -662,8 +682,8 @@ rather than hiding it.
 
 **Two smaller noise fixes:** a `regions` array that merely restates the
 default boxes (penpa conversions always emit one) is no longer reported as an
-unsupported key -- true jigsaw regions still are, since Section 7.4's gap is
-real. And SudokuPad's transparent full-grid `{class: "board-position"}`
+unsupported key -- true jigsaw regions still are, and since 2026-08-31 they
+also switch box checking off entirely (Section 7.4). And SudokuPad's transparent full-grid `{class: "board-position"}`
 underlay is dropped as plumbing, so the board doesn't claim an unexplained
 marking when it has none.
 

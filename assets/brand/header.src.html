@@ -1,0 +1,109 @@
+<!doctype html>
+<!--
+  Source for header-light.png / header-dark.png (assets/brand/).
+
+  Render at 1280x300 with a 2x device scale factor, once with <html> bare for
+  the light PNG and once with class="dark" for the dark one. Any headless
+  browser will do; the PNGs in this folder were shot with Playwright.
+
+  Colours are the app's own cool-light / cool-dark tokens (src/renderer/src/
+  style.css), so the banner and the app agree.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&display=swap">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    --paper: #f5f8fc; --ink: #16233b; --muted: #5b6b85; --accent: #2563eb;
+    --thin: rgba(22, 35, 59, .07); --heavy: rgba(22, 35, 59, .14);
+    --glyph: rgba(22, 35, 59, .17);
+  }
+  html.dark {
+    --paper: #0f172a; --ink: #e2e8f0; --muted: #94a3b8; --accent: #60a5fa;
+    --thin: rgba(226, 232, 240, .07); --heavy: rgba(226, 232, 240, .15);
+    --glyph: rgba(226, 232, 240, .19);
+  }
+
+  body {
+    width: 1280px; height: 300px;
+    background: var(--paper);
+    font-family: Archivo, sans-serif;
+    position: relative; overflow: hidden;
+  }
+
+  /* Sudoku-ruled ground: thin lines every 40px, heavy box rules every 120px,
+     faded out to the left so it never fights the wordmark. */
+  .rules {
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(to right,  var(--thin)  0 1px, transparent 1px 40px),
+      repeating-linear-gradient(to bottom, var(--thin)  0 1px, transparent 1px 40px),
+      repeating-linear-gradient(to right,  var(--heavy) 0 2px, transparent 2px 120px),
+      repeating-linear-gradient(to bottom, var(--heavy) 0 2px, transparent 2px 120px);
+    background-position: 40px 20px;
+    -webkit-mask-image: linear-gradient(to left, #000 0%, #000 44%, transparent 80%);
+    mask-image: linear-gradient(to left, #000 0%, #000 44%, transparent 80%);
+  }
+
+  /* The right-hand field carries constraints the app actually reads -- thermo,
+     arrow, killer cage, kropki -- drawn on the ruling as a watermark. It says
+     "variant sudoku" without needing a caption. */
+  .glyphs { position: absolute; inset: 0; color: var(--glyph); }
+  .live-cell { fill: var(--accent); opacity: .18; }
+
+  .content { position: absolute; left: 74px; top: 0; bottom: 0; display: flex; align-items: center; gap: 36px; }
+  .mark { color: var(--ink); flex: none; }
+  h1 { font-weight: 600; font-size: 80px; line-height: 1; letter-spacing: -.045em; color: var(--ink); }
+  p { margin-top: 14px; font-weight: 400; font-size: 20px; letter-spacing: -.004em; color: var(--muted); }
+  .accent-word { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="rules"></div>
+
+  <svg class="glyphs" width="1280" height="300" viewBox="0 0 1280 300" fill="none"
+       stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <!-- thermometer: bulb + track, sitting on the y=100 rule -->
+    <path d="M860 100H980" stroke-width="21"/>
+    <circle cx="860" cy="100" r="25" fill="currentColor" stroke="none"/>
+
+    <!-- arrow: circle, then a bent path with a head -->
+    <g stroke-width="6.5">
+      <circle cx="1100" cy="100" r="25"/>
+      <path d="M1122 114 1170 148 1216 112"/>
+      <path d="M1204 104 1216 112 1209 124"/>
+    </g>
+
+    <!-- killer cage, aligned to the 40px ruling -->
+    <rect x="820" y="180" width="160" height="80" rx="10" stroke-width="4.5" stroke-dasharray="9 8"/>
+    <text x="834" y="208" font-family="Archivo, sans-serif" font-size="25"
+          font-weight="600" fill="currentColor" stroke="none">17</text>
+
+    <!-- kropki pair; the left cell is the one in progress -->
+    <rect class="live-cell" x="1060" y="190" width="60" height="60" rx="3" stroke="none"/>
+    <g stroke-width="4.5">
+      <rect x="1060" y="190" width="60" height="60" rx="3"/>
+      <rect x="1120" y="190" width="60" height="60" rx="3"/>
+    </g>
+    <circle cx="1120" cy="220" r="10" fill="currentColor" stroke="none"/>
+  </svg>
+
+  <div class="content">
+    <svg class="mark" width="124" height="124" viewBox="0 0 32 32" fill="none"
+         stroke="currentColor" stroke-width="4" stroke-linecap="butt">
+      <path d="M3 11H8.2M13.8 11H29"/>
+      <path d="M3 21H18.2M23.8 21H29"/>
+      <path d="M11 3V18.2M11 23.8V29"/>
+      <path d="M21 3V8.2M21 13.8V29"/>
+    </svg>
+    <div>
+      <h1>Gridwork</h1>
+      <p>A local workbench for variant sudoku. <span class="accent-word">You</span> solve the puzzle.</p>
+    </div>
+  </div>
+</body>
+</html>

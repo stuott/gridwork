@@ -5,6 +5,7 @@ import {
   type Constraint,
   type PuzzleModel,
   type ThermoConstraint,
+  type SclDecorationArrow,
   type SclDecorationLine,
   type SclDecorationOverlay,
 } from "../../model/types";
@@ -131,6 +132,63 @@ function parseDecorationLines(raw: unknown, cellSize: number): SclDecorationLine
   return out;
 }
 
+/**
+ * Normalize a length field whose scale scl doesn't state consistently.
+ *
+ * One scl object mixes both scales already: an overlay's `width`/`height`
+ * are fractions of a cell (0.76, 0.85 in the real payloads) while its
+ * `thickness` is in the puzzle's own cellSize px units (3.84, 21, 22.4).
+ * `fontSize` and an arrow's `headLength` are the two fields no payload
+ * this project has on hand pins down, so they're read by magnitude: a
+ * value too large to be a sane fraction of one cell is cellSize units and
+ * gets divided; anything smaller already is a fraction.
+ *
+ * The two readings are far apart for every plausible real value -- a
+ * 0.3-cell arrowhead is either 0.3 or ~19, a half-cell glyph either 0.5 or
+ * ~32 -- so the split is unambiguous in practice, and being wrong only
+ * mis-sizes a decoration rather than mis-stating a rule. Replace this with
+ * a plain divide the moment a real arrow/text payload settles the question.
+ */
+function asCellFraction(v: unknown, cellSize: number): number | undefined {
+  const n = asNumber(v);
+  if (n === undefined) return undefined;
+  return Math.abs(n) > 1.5 ? n / cellSize : n;
+}
+
+/**
+ * scl's `arrows` array: the same way-point path as `lines`, drawn with an
+ * arrowhead on the final way-point. It's a first-class key in SudokuPad's
+ * own minifier table (`a` -> arrows, `hl` -> headLength; see
+ * puzzleZipper.ts), but this parser never read it until 2026-08-31, so
+ * every arrow-variant puzzle rendered with its arrows missing --
+ * `arrows` merely got reported as an unsupported *constraint*, which is
+ * both the wrong category and no help to someone trying to solve.
+ *
+ * Like lines and overlays these stay decorations, never constraints:
+ * nothing in the payload says a given arrow means the arrow-sum rule
+ * rather than, say, a direction marker for some bespoke variant.
+ */
+function parseDecorationArrows(raw: unknown, cellSize: number): SclDecorationArrow[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SclDecorationArrow[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const it = item as Record<string, unknown>;
+    const wayPoints = Array.isArray(it.wayPoints)
+      ? (it.wayPoints.map(rawPoint).filter(Boolean) as Array<[number, number]>)
+      : [];
+    if (wayPoints.length < 2) continue; // nothing drawable
+    const thickness = asNumber(it.thickness);
+    out.push({
+      wayPoints,
+      color: typeof it.color === "string" ? it.color : undefined,
+      thickness: thickness === undefined ? undefined : thickness / cellSize,
+      headLength: asCellFraction(it.headLength, cellSize),
+    });
+  }
+  return out;
+}
+
 function parseDecorationOverlays(raw: unknown, cellSize: number): SclDecorationOverlay[] {
   if (!Array.isArray(raw)) return [];
   const out: SclDecorationOverlay[] = [];
@@ -139,19 +197,26 @@ function parseDecorationOverlays(raw: unknown, cellSize: number): SclDecorationO
     const it = item as Record<string, unknown>;
     const center = rawPoint(it.center);
     if (!center) continue;
+    const text = it.text === undefined || it.text === null ? undefined : String(it.text);
     const width = asNumber(it.width);
     const height = asNumber(it.height);
-    if (width === undefined || height === undefined) continue;
+    // A shape needs a size to be drawable, but a *label* doesn't: SudokuPad
+    // writes bare text overlays (cage sums, little-killer clues) with no
+    // width/height at all, and the old size check dropped those outright.
+    if ((width === undefined || height === undefined) && text === undefined) continue;
     const thickness = asNumber(it.thickness);
     out.push({
       center,
-      width,
-      height,
+      width: width ?? 0,
+      height: height ?? 0,
       angle: asNumber(it.angle),
       rounded: it.rounded === true,
       backgroundColor: typeof it.backgroundColor === "string" ? it.backgroundColor : undefined,
       borderColor: typeof it.borderColor === "string" ? it.borderColor : undefined,
       thickness: thickness === undefined ? undefined : thickness / cellSize,
+      text: text === undefined || text === "" ? undefined : text,
+      fontSize: asCellFraction(it.fontSize, cellSize),
+      color: typeof it.color === "string" ? it.color : undefined,
     });
   }
   return out;
@@ -396,6 +461,7 @@ const HANDLED_KEYS = new Set([
   "lines",
   "overlays",
   "underlays",
+  "arrows",
   "id",
   "cellSize",
   "settings",
@@ -496,6 +562,14 @@ export function parseScl(raw: unknown): PuzzleModel {
   const rawLines = Array.isArray(obj.lines) ? (obj.lines as unknown[]) : [];
   const rawUnderlays = Array.isArray(obj.underlays) ? (obj.underlays as unknown[]) : [];
 
+  // A `regions` array that isn't a restatement of the default boxes is a
+  // jigsaw layout this app can't validate. It was already reported as
+  // unsupported; `irregularRegions` is what actually stops the box checks
+  // running against regions that aren't the puzzle's (see PuzzleModel).
+  const regionsAreBoxes = regionsAreDefaultBoxes(obj.regions, size);
+  const irregularRegions =
+    Array.isArray(obj.regions) && (obj.regions as unknown[]).length > 0 && !regionsAreBoxes;
+
   // Thermometers are recoverable as real constraints because the bulb is
   // explicitly tagged (see inferThermometers). Whether they're *strict* or
   // *slow* thermos is only ever stated in prose, so that comes from the
@@ -505,6 +579,13 @@ export function parseScl(raw: unknown): PuzzleModel {
   constraints.push(...thermos.constraints);
 
   const importNotes: string[] = [];
+  if (irregularRegions) {
+    importNotes.push(
+      "This puzzle has irregular (jigsaw) regions. This app can't read that layout yet, so it is checking " +
+        "rows and columns only — no region checking at all — rather than checking the ordinary boxes, which " +
+        "are not this puzzle's regions. Box outlines are hidden for the same reason.",
+    );
+  }
   if (thermos.constraints.length > 0) {
     importNotes.push(
       `${thermos.constraints.length} thermometer${thermos.constraints.length === 1 ? "" : "s"} were read from the drawing and ARE being checked, as ` +
@@ -519,6 +600,7 @@ export function parseScl(raw: unknown): PuzzleModel {
     cellSize,
   );
   const decorationOverlays = parseDecorationOverlays(obj.overlays, cellSize);
+  const decorationArrows = parseDecorationArrows(obj.arrows, cellSize);
   const decorationUnderlays = parseDecorationOverlays(
     rawUnderlays.filter((item) => !thermos.consumed.has(item) && !isBoardPositionRect(item)),
     cellSize,
@@ -543,7 +625,6 @@ export function parseScl(raw: unknown): PuzzleModel {
   // earlier version flagged those anyway, which told the user a puzzle was
   // missing things it never had (e.g. "regions" on a puzzle whose `regions`
   // was `[]`).
-  const regionsAreBoxes = regionsAreDefaultBoxes(obj.regions, size);
   for (const key of Object.keys(obj)) {
     if (HANDLED_KEYS.has(key)) continue;
     if (key === "regions" && regionsAreBoxes) continue;
@@ -562,11 +643,20 @@ export function parseScl(raw: unknown): PuzzleModel {
     grid,
     constraints,
     globalRules,
+    irregularRegions: irregularRegions ? true : undefined,
     solution,
     importNotes: importNotes.length > 0 ? importNotes : undefined,
     decorations:
-      decorationLines.length > 0 || decorationOverlays.length > 0 || decorationUnderlays.length > 0
-        ? { lines: decorationLines, overlays: decorationOverlays, underlays: decorationUnderlays }
+      decorationLines.length > 0 ||
+      decorationOverlays.length > 0 ||
+      decorationUnderlays.length > 0 ||
+      decorationArrows.length > 0
+        ? {
+            lines: decorationLines,
+            overlays: decorationOverlays,
+            underlays: decorationUnderlays,
+            arrows: decorationArrows,
+          }
         : undefined,
   };
 }

@@ -201,12 +201,77 @@ const digitsOn = (m: Mounted): string[] =>
         lines: [{ wayPoints: [[-0.5, 0.5], [-0.5, 3.5]] }],
         overlays: [],
         underlays: [],
+        arrows: [],
       },
     }),
   );
   check("decorations reaching outside the grid widen the viewBox", mounted.svg.getAttribute("viewBox") === `0 0 ${4 * CELL + 64} ${4 * CELL + 64}`);
   check("decoration lines are drawn", mounted.svg.querySelectorAll("polyline.scl-decoration-line").length === 1);
   unmount(mounted);
+}
+
+{
+  // audit-2026-08-31 issue 2: scl `arrows` were parsed by nothing and drawn
+  // by nothing, so an arrow puzzle rendered with part of its picture gone.
+  const mounted = mount(
+    model(4, {
+      decorations: {
+        lines: [],
+        overlays: [],
+        underlays: [],
+        arrows: [{ wayPoints: [[0.5, 0.5], [0.5, 2.5]], color: "#ff0000", thickness: 0.05, headLength: 0.3 }],
+      },
+    }),
+  );
+  const arrowParts = [...mounted.svg.querySelectorAll(".scl-decoration-line")];
+  check("an arrow decoration draws its shaft as a polyline", arrowParts.filter((e) => e.tagName === "polyline").length === 1);
+  check("an arrow decoration draws a two-stroke arrowhead at the tip", arrowParts.filter((e) => e.tagName === "line").length === 2);
+  check("an arrow keeps the source color rather than a theme color", arrowParts.every((e) => e.getAttribute("stroke") === "#ff0000"));
+  // Head strokes must start at the LAST way-point (r0.5,c2.5), not the first.
+  const head = arrowParts.find((e) => e.tagName === "line")!;
+  check(
+    "the arrowhead sits on the final way-point",
+    Number(head.getAttribute("x1")) === 2.5 * CELL && Number(head.getAttribute("y1")) === 0.5 * CELL,
+  );
+  const notes = mounted.container.querySelector(".board-notes")?.textContent ?? "";
+  check("arrows count toward the 'drawn but not checked' shape total", notes.includes("(1 shape)"));
+  unmount(mounted);
+}
+
+{
+  // audit-2026-08-31 issue 3: overlay `text` was discarded, so cage sums,
+  // X/V letters and little-killer clues rendered as empty shapes.
+  const mounted = mount(
+    model(4, {
+      decorations: {
+        lines: [],
+        overlays: [
+          { center: [0.5, 0.5], width: 0.3, height: 0.3, text: "15", fontSize: 0.4, color: "#123456" },
+          { center: [1.5, 1.5], width: 0, height: 0, text: "X" },
+        ],
+        underlays: [],
+        arrows: [],
+      },
+    }),
+  );
+  const labels = [...mounted.svg.querySelectorAll("text.scl-decoration-text")];
+  check("overlay text is drawn", labels.map((t) => t.textContent).join(",") === "15,X");
+  check("overlay text uses the source font size and color", labels[0]!.getAttribute("font-size") === String(0.4 * CELL) && labels[0]!.getAttribute("fill") === "#123456");
+  check("a text overlay with no size draws no stray 0x0 shape", mounted.svg.querySelectorAll("rect.scl-decoration-overlay, ellipse.scl-decoration-overlay").length === 1);
+  unmount(mounted);
+}
+
+{
+  // audit-2026-08-31 issue 1: a jigsaw's boxes are not its regions, so the
+  // board must not draw box outlines it can't stand behind.
+  const plain = mount(model(4));
+  const plainThick = plain.svg.querySelectorAll("line.grid-line-thick").length;
+  unmount(plain);
+  const jigsaw = mount(model(4, { irregularRegions: true }));
+  const jigsawThick = jigsaw.svg.querySelectorAll("line.grid-line-thick").length;
+  check("an ordinary 4x4 draws its box outlines heavy", plainThick > 4);
+  check("an irregular-region puzzle draws only the outer border heavy", jigsawThick === 4);
+  unmount(jigsaw);
 }
 
 {

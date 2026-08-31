@@ -1,7 +1,14 @@
+<!-- Gridwork mark. Standalone asset: browsers render the favicon outside the
+     document, so the theme tokens in style.css can't reach it and the two
+     colours below have to be literals. They're the cool-light --ink and
+     --paper values, which read acceptably on both light and dark tab strips.
+     Source and alternates: assets/brand/. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="5" fill="#1f2937"/>
-  <g stroke="#e5e7eb" stroke-width="1.6" stroke-linecap="round">
-    <path d="M5 5h22v22H5z" fill="none"/>
-    <path d="M12.33 5v22M19.67 5v22M5 12.33h22M5 19.67h22"/>
+  <rect width="32" height="32" rx="5" fill="#16233b"/>
+  <g fill="none" stroke="#f5f8fc" stroke-width="3.4" stroke-linecap="butt">
+    <path d="M5 11.5H9.1M13.5 11.5H27"/>
+    <path d="M5 20.5H18.1M22.5 20.5H27"/>
+    <path d="M11.5 5V18.1M11.5 22.5V27"/>
+    <path d="M20.5 5V9.1M20.5 13.5V27"/>
   </g>
 </svg>

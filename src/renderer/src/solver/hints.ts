@@ -1,4 +1,4 @@
-import { boxDims, type PuzzleModel } from "../model/types";
+import { boxDims, boxesAreChecked, type PuzzleModel } from "../model/types";
 import { computeCandidates } from "./candidates";
 
 /**
@@ -51,7 +51,7 @@ function buildUnits(model: PuzzleModel): Unit[] {
   for (let c = 0; c < size; c++) {
     units.push({ label: `Column ${c + 1}`, cells: Array.from({ length: size }, (_, r) => ({ r, c })) });
   }
-  if (boxW < size) {
+  if (boxesAreChecked(model)) {
     for (let boxRow = 0; boxRow < size / boxH; boxRow++) {
       for (let boxCol = 0; boxCol < size / boxW; boxCol++) {
         const cells: Array<{ r: number; c: number }> = [];
@@ -139,7 +139,9 @@ function findNakedPair(model: PuzzleModel, units: Unit[]): Hint | null {
 function findPointingPair(model: PuzzleModel): Hint | null {
   const { size } = model;
   const { boxW, boxH } = boxDims(size);
-  if (boxW >= size) return null; // no sub-box structure (e.g. non-square-root sizes)
+  // No usable box structure: a non-square-root size, or a jigsaw layout
+  // whose real regions this app can't read (PuzzleModel.irregularRegions).
+  if (!boxesAreChecked(model)) return null;
 
   for (let boxRow = 0; boxRow < size / boxH; boxRow++) {
     for (let boxCol = 0; boxCol < size / boxW; boxCol++) {

@@ -22,7 +22,10 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 app.innerHTML = `
   <div class="app-shell">
-    <h1>Sudoku Solving Assistant</h1>
+    <header class="app-header">
+      <h1>Gridwork</h1>
+      <p class="tagline">Paste a puzzle. You solve it.</p>
+    </header>
     <form id="import-form" class="import-form">
       <input
         id="puzzle-input"

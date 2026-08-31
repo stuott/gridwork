@@ -1,5 +1,7 @@
 {
-  "name": "sudoku-solver",
+  "name": "gridwork",
+  "productName": "Gridwork",
+  "description": "A local workbench for solving variant sudoku puzzles. It never solves them for you.",
   "private": true,
   "version": "0.0.0",
   "type": "module",

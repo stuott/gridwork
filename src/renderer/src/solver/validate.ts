@@ -1,4 +1,4 @@
-import { boxDims, cellRefToIndex, type CellRef, type PuzzleModel } from "../model/types";
+import { boxDims, boxesAreChecked, cellRefToIndex, type CellRef, type PuzzleModel } from "../model/types";
 
 export interface Conflict {
   reason: string;
@@ -19,6 +19,10 @@ export interface Conflict {
 export function findConflicts(model: PuzzleModel): Conflict[] {
   const { size, grid } = model;
   const { boxW, boxH } = boxDims(size);
+  // False for a jigsaw puzzle whose regions this app can't read: its boxes
+  // are not its regions, so checking them would report conflicts for a rule
+  // the puzzle doesn't have. See PuzzleModel.irregularRegions.
+  const checkBoxes = boxesAreChecked(model);
   const conflicts: Conflict[] = [];
 
   const valueAt = (r: number, c: number): number | undefined =>
@@ -57,7 +61,7 @@ export function findConflicts(model: PuzzleModel): Conflict[] {
     }
   }
 
-  if (boxW < size) {
+  if (checkBoxes) {
     for (let boxRow = 0; boxRow < size / boxH; boxRow++) {
       for (let boxCol = 0; boxCol < size / boxW; boxCol++) {
         const seen = new Map<number, Array<{ r: number; c: number }>>();
@@ -118,7 +122,7 @@ export function findConflicts(model: PuzzleModel): Conflict[] {
     }
   }
 
-  if (disjointGroups && boxW < size) {
+  if (disjointGroups && checkBoxes) {
     for (let pr = 0; pr < boxH; pr++) {
       for (let pc = 0; pc < boxW; pc++) {
         const seen = new Map<number, Array<{ r: number; c: number }>>();

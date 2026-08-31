@@ -4,8 +4,8 @@ Guidance for working in this repo. Read this before writing code here.
 
 ## What this app is
 
-A local Electron app for **solving** variant sudoku puzzles the user finds
-online. The user solves; the computer assists.
+**Gridwork** — a local Electron app for **solving** variant sudoku puzzles the
+user finds online. The user solves; the computer assists.
 
 **The hard rule: this app never solves a puzzle for the user.** Hints name a
 *technique* and point at cells — for a placement technique they deliberately do
@@ -59,6 +59,7 @@ src/renderer/src/
   settings.ts     app-wide VerificationPrefs (load/save + pub/sub)
   theme.ts        theme pref load/save/apply
 scripts/          smoke tests, one per area, plus real payload fixtures
+assets/brand/     the mark, its rejected alternates, and the README banner
 ```
 
 `design.md` is the deep technical reference. `phase-status.md` is the
@@ -102,6 +103,20 @@ shape `settings.ts` already has. `board.ts` subscribes in its constructor and
 them with `setButtonIcon()`. Assigning `.textContent` to one deletes its `<svg>`
 — that was a real shipped bug. Update `title` **and** `aria-label` together when
 a button's meaning changes.
+
+**The brand mark is one drawing, not a set.** The Gridwork mark lives in two
+places on purpose: `titlebar.ts` (`BRAND_MARK`, inline SVG on
+`stroke="currentColor"`, so `--ink` drives it and all six themes work off one
+copy) and `public/favicon.svg` (a standalone asset the theme tokens can't
+reach, so its two colours are literals — that's the only place a brand colour
+is allowed to be hard-coded). Its weave gaps depend on `stroke-linecap="butt"`;
+round caps extend half a stroke width past each endpoint and close them up.
+`assets/brand/` holds the source SVGs and the alternates it was chosen from.
+
+**Don't rename the `sudoku:` localStorage keys.** `settings.ts`,
+`theme.ts` and `state/persistence.ts` all key off that prefix. It predates the
+Gridwork name and is deliberately left alone: renaming it silently discards
+every user's saved progress, history and theme choice on first launch.
 
 **Colors live in CSS, never inline.** Elements set a class; `style.css` maps it
 to a theme token. Six themes (`cool`/`warm`/`nebula` × light/dark) all key off

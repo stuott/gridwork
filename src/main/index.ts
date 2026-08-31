@@ -71,9 +71,11 @@ function createWindow(): void {
     width: 1100,
     height: 850,
     // No OS titlebar/menu at all -- src/renderer/src/titlebar.ts draws a
-    // custom one instead. The app has no title or icon yet on purpose
-    // (blank brand slate); this is just the minimize/maximize/close
-    // controls a frameless window still needs to stay usable.
+    // custom one instead, including the Gridwork mark and wordmark. The
+    // title below is therefore never painted by the OS, but it's still what
+    // the taskbar, the window switcher and screen readers report, so it has
+    // to be set here rather than in the renderer.
+    title: "Gridwork",
     frame: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),

@@ -1,4 +1,4 @@
-import { boxDims, type PuzzleModel } from "../model/types";
+import { boxDims, boxesAreChecked, type PuzzleModel } from "../model/types";
 
 /**
  * Legal-candidate computation using classic row/col/box rules only.
@@ -10,6 +10,10 @@ import { boxDims, type PuzzleModel } from "../model/types";
 export function computeCandidates(model: PuzzleModel): void {
   const { size, grid } = model;
   const { boxW, boxH } = boxDims(size);
+  // Auto-candidates are display-only, but a jigsaw's boxes still aren't its
+  // regions -- eliminating on them would show the user candidate marks that
+  // are simply wrong. See PuzzleModel.irregularRegions.
+  const checkBoxes = boxesAreChecked(model);
   const all: number[] = [];
   for (let n = 1; n <= size; n++) all.push(n);
 
@@ -32,7 +36,7 @@ export function computeCandidates(model: PuzzleModel): void {
         const v = valueAt(rr, c);
         if (v !== undefined) used.add(v);
       }
-      if (boxW < size) {
+      if (checkBoxes) {
         const boxRowStart = Math.floor(r / boxH) * boxH;
         const boxColStart = Math.floor(c / boxW) * boxW;
         for (let dr = 0; dr < boxH; dr++) {

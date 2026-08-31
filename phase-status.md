@@ -1,6 +1,6 @@
-# Sudoku Solving Assistant — Progress Overview
+# Gridwork — Progress Overview
 
-_Last updated: August 30, 2026_
+_Last updated: August 31, 2026_
 
 A plain-language summary of what's been built so far and what's still left. For technical detail on any item below, see `design.md` in this same folder.
 
@@ -24,13 +24,19 @@ A desktop app that helps you solve variant sudoku puzzles you find online — it
 
 **Appearance / themes.** A settings panel with six color themes (three color families, each in a light and dark version) so you can pick the look you prefer.
 
+**SudokuPad markings drawn in full.** As of 2026-08-31 the board also draws the arrows and the printed numbers/letters those puzzles carry — cage sums, X and V markers, little-killer clues, quadruple digits. Both were being dropped before, so an arrow puzzle arrived with its arrows missing and every cage sum showed as an empty shape. As with the rest of these markings the app draws them but doesn't check them; the puzzle's written rules are shown above the board so you can apply them yourself.
+
+**A name and a logo.** The app is called **Gridwork** as of 2026-08-31 — the grid you solve on, plus *-work* the way latticework and brickwork use it: something assembled by hand, one piece at a time. The logo is four bars woven over and under. It shows in the window title bar, above the puzzle input, and as the taskbar and browser-tab icon; because it's drawn in a single colour that follows the theme, one copy covers all six themes. The project also has a README now, with a banner image. Six candidate logos were drawn before picking this one — they're kept in `assets/brand/` along with the presentation sheet.
+
+One thing deliberately *not* renamed: the keys the app saves your progress, history and settings under still start with `sudoku:`. Changing them would make every saved puzzle and your theme choice disappear on first launch, which isn't worth a tidier name in a file nobody sees.
+
 **Desktop app conversion.** The app now runs as a real Windows desktop application with its own window and title bar, rather than a browser tab — which also cleaned up some networking issues that only came up when running in a browser.
 
 ## Not started yet / left to do
 
-**Packaging & distribution.** Right now the app runs from source code. Turning it into a proper installable program — a real installer, an app icon, possibly auto-updates — hasn't been done yet.
+**Packaging & distribution.** Right now the app runs from source code. Turning it into a proper installable program — a real installer, auto-updates — hasn't been done yet. The logo exists, but it hasn't been turned into the `.ico`/`.icns` files an installer needs.
 
-**Irregular ("jigsaw") box shapes.** Puzzles where the 9 regions aren't standard 3x3 boxes aren't supported yet — the app currently assumes standard box shapes.
+**Irregular ("jigsaw") box shapes.** Puzzles where the 9 regions aren't standard 3x3 boxes still aren't solvable in the app — but as of 2026-08-31 it recognizes them and says so instead of quietly checking the wrong regions. A jigsaw now loads with a note explaining that only rows and columns are being checked, and the board stops drawing 3x3 box outlines the puzzle doesn't have. Previously it looked like an ordinary puzzle and flagged correct digits as mistakes.
 
 **A handful of rarer variant types.** Some less-common puzzle styles are still unsupported: region-sum lines, row/column/box "indexer" clues, X-sum and skyscraper clues, a few exotic line types (entropic, modular, nabner, zipper, double-arrow, slow-thermometer lines), and "negative constraint" rules, which apply to every unmarked pair in the grid rather than just the ones with a symbol on them.
 

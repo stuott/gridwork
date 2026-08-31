@@ -266,6 +266,38 @@ export interface SclDecorationOverlay {
   borderColor?: string;
   /** Border stroke width as a fraction of one cell (already divided by cellSize in scl.ts). */
   thickness?: number;
+  /**
+   * Text drawn inside the shape. This is how SudokuPad renders every
+   * number or letter on a board that isn't a grid digit: killer cage sums,
+   * X/V letters, little-killer clues, quadruple digits, sandwich clues.
+   * Discarding it (as this app did until 2026-08-31) left every one of
+   * those shapes on the board empty -- the incomplete-picture failure the
+   * decorations channel exists to prevent.
+   */
+  text?: string;
+  /** Text size as a fraction of one cell (normalized in scl.ts). */
+  fontSize?: number;
+  /** Text fill color, when the source names one. */
+  color?: string;
+}
+
+/**
+ * scl's `arrows`: a stroked path exactly like SclDecorationLine, plus an
+ * arrowhead drawn at the LAST way-point. SudokuPad keeps arrows in their
+ * own array rather than as a flag on `lines`, so a parser that only reads
+ * `lines` drops them silently -- which is what this app did until
+ * 2026-08-31, leaving arrow-variant puzzles with their arrows missing from
+ * the drawing. Like every other decoration these are drawn but never
+ * validated: an scl arrow carries no statement that it means the
+ * arrow-sum rule (see importer/formats/scl.ts's file comment).
+ */
+export interface SclDecorationArrow {
+  wayPoints: Array<[number, number]>;
+  color?: string;
+  /** Stroke width as a fraction of one cell (normalized in scl.ts). */
+  thickness?: number;
+  /** Arrowhead length as a fraction of one cell (normalized in scl.ts). */
+  headLength?: number;
 }
 
 export interface PuzzleModel {
@@ -287,6 +319,8 @@ export interface PuzzleModel {
      * no visible bulb.
      */
     underlays: SclDecorationOverlay[];
+    /** scl's `arrows`: stroked paths that end in an arrowhead. */
+    arrows: SclDecorationArrow[];
   };
   /** Whole-grid rules that aren't tied to specific cells/lines. */
   globalRules: {
@@ -300,6 +334,21 @@ export interface PuzzleModel {
     /** No two orthogonally-adjacent cells may hold consecutive digits, grid-wide. */
     nonConsecutive?: boolean;
   };
+  /**
+   * Set when the source puzzle declares a region layout that is NOT the
+   * ordinary box grid -- a jigsaw/irregular puzzle. This app has no jigsaw
+   * support yet (design.md 7.4), and the regions it *would* check are then
+   * simply the wrong ones, so every box-based check (conflicts, auto
+   * candidates, hints, disjoint groups) switches off and the board stops
+   * drawing box outlines it can't stand behind. See `boxesAreChecked`.
+   *
+   * This is CLAUDE.md's "never validate a rule the puzzle might not have"
+   * invariant: checking nothing is honest, checking the wrong regions is
+   * not. Both importers set it -- fpuzzles.ts from the per-cell `region`
+   * field, scl.ts from a `regions` array that isn't a restatement of the
+   * default boxes.
+   */
+  irregularRegions?: boolean;
   /** The full solution digits, when the source puzzle included one (used for win detection only -- never shown to the user). */
   solution?: number[][];
   /**
@@ -329,6 +378,21 @@ export function boxDims(size: number): { boxW: number; boxH: number } {
     return { boxW: root, boxH: root };
   }
   return { boxW: size, boxH: size };
+}
+
+/**
+ * Whether this puzzle's boxes may be conflict-checked / used as units.
+ *
+ * False in two cases: a grid size with no clean square-root box layout
+ * (`boxDims` falls back to one box covering everything, which is not a
+ * real unit), and a puzzle whose regions are irregular and therefore
+ * unknown to this app. Every box-based code path goes through this rather
+ * than testing `boxW < size` itself, so the jigsaw case can never be
+ * forgotten at one of them. See PuzzleModel.irregularRegions.
+ */
+export function boxesAreChecked(model: Pick<PuzzleModel, "size" | "irregularRegions">): boolean {
+  const { boxW } = boxDims(model.size);
+  return boxW < model.size && model.irregularRegions !== true;
 }
 
 /** Cage/thermo/etc. constraints store 1-indexed CellRefs (matching "R1C1"); the grid array itself is 0-indexed. This is the only place that conversion should happen. */

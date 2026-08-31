@@ -201,5 +201,56 @@ runAssertions(parseFPuzzles(decoded1.json), "prefixed");
 runAssertions(parseFPuzzles(decoded2.json), "bare");
 runAssertions(parseFPuzzles(JSON.parse(json)), "raw-json");
 
+// ---------------------------------------------------------------------------
+// Jigsaw guard (audit-2026-08-31 issue 1). f-puzzles records an irregular
+// layout as a per-cell `region` index; this parser used to ignore the field
+// entirely, so a jigsaw imported clean and was then conflict-checked against
+// boxes that are not its regions, with no warning anywhere.
+// ---------------------------------------------------------------------------
+function grid4(regions?: number[][]) {
+  return Array.from({ length: 4 }, (_, r) =>
+    Array.from({ length: 4 }, (_, c) => (regions ? { region: regions[r]![c]! } : {})),
+  );
+}
+const unsupportedKeysOf = (m: ReturnType<typeof parseFPuzzles>) =>
+  new Set(
+    m.constraints
+      .filter((c): c is Extract<typeof c, { type: "unsupported" }> => c.type === "unsupported")
+      .map((c) => c.sourceKey),
+  );
+
+{
+  const m = parseFPuzzles({ size: 4, grid: grid4() });
+  check("[jigsaw] a puzzle with no region data is left alone", m.irregularRegions === undefined && !unsupportedKeysOf(m).has("region"));
+}
+{
+  // The ordinary 2x2 boxes, written out explicitly -- what most exports do.
+  const m = parseFPuzzles({ size: 4, grid: grid4([[0, 0, 1, 1], [0, 0, 1, 1], [2, 2, 3, 3], [2, 2, 3, 3]]) });
+  check("[jigsaw] regions that merely restate the default boxes are not flagged", m.irregularRegions === undefined);
+}
+{
+  // Same partition, different numbering. Comparing region *indexes* would
+  // wrongly flag this ordinary grid and switch box checking off on it.
+  const m = parseFPuzzles({ size: 4, grid: grid4([[3, 3, 2, 2], [3, 3, 2, 2], [1, 1, 0, 0], [1, 1, 0, 0]]) });
+  check("[jigsaw] default boxes under a different numbering are still not flagged", m.irregularRegions === undefined);
+}
+{
+  // A genuine irregular layout: four connected regions, none a 2x2 box.
+  const m = parseFPuzzles({ size: 4, grid: grid4([[0, 0, 0, 1], [0, 2, 1, 1], [2, 2, 3, 1], [2, 3, 3, 3]]) });
+  check("[jigsaw] a real irregular layout is detected", m.irregularRegions === true);
+  check("[jigsaw] it is reported as an unsupported 'region'", unsupportedKeysOf(m).has("region"));
+  check(
+    "[jigsaw] the solver is told plainly that region checking is off",
+    (m.importNotes ?? []).some((n) => n.includes("jigsaw") && n.includes("rows and columns only")),
+  );
+}
+{
+  // Partial region data is unreadable, so it reads as irregular rather than
+  // as "probably ordinary" -- the safe direction to be wrong in.
+  const g = grid4([[0, 0, 1, 1], [0, 0, 1, 1], [2, 2, 3, 3], [2, 2, 3, 3]]) as Array<Array<Record<string, unknown>>>;
+  delete g[0]![0]!.region;
+  check("[jigsaw] partial region data is treated as unreadable", parseFPuzzles({ size: 4, grid: g }).irregularRegions === true);
+}
+
 console.log(failed ? "\nSMOKE TEST: FAILED" : "\nSMOKE TEST: ALL PASSED");
 process.exitCode = failed ? 1 : 0;
