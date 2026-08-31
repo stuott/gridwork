@@ -8,12 +8,23 @@
 // given lights nothing, and nothing under the fog can reach a conflict, a
 // candidate or a hint.
 //
-// NOTE: the format side of this (which keys carry fog, and what the two
-// light sizes mean) comes from sudocle's converters, not yet from a real
-// fog payload -- see state/fog.ts's TODO. These checks lock in the
-// behaviour so a real fixture can confirm or correct it in one place.
+// The last block runs against a REAL fog payload (puzzle c74ujud2wz,
+// "Fogs-n-Dots-n-Knights" by Meggen033), which is what turns the rest of
+// this file from research into fact -- see the comment on that block for
+// what it confirmed and what it still doesn't.
 //
 // Run with: npm run test:fog
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+// decode.ts imports lz-string, which has no clean ESM named exports under
+// plain Node (fine under Vite) -- same workaround smoke-test-scl.ts and
+// smoke-test-importer.ts use. The fpuz branch of decode.ts is replicated in
+// the fixture block below rather than imported.
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const LZString = require("lz-string") as typeof import("lz-string");
 
 import { computeFogMask, foggedCount, isFogged, revealedModel, fogImportNotes } from "../src/renderer/src/state/fog";
 import { findConflicts } from "../src/renderer/src/solver/validate";
@@ -210,6 +221,66 @@ function litCells(m: PuzzleModel): Set<string> {
     "scl: fog keys are not reported as unsupported",
     !m.constraints.some((c) => c.type === "unsupported" && (c.sourceKey === "fogofwar" || c.sourceKey === "foglight")),
   );
+}
+
+// --- the real payload -------------------------------------------------------
+// Puzzle c74ujud2wz, "Fogs-n-Dots-n-Knights" by Meggen033, captured
+// 2026-08-31 from https://sudokupad.app/api/puzzle/c74ujud2wz (verified
+// byte-for-byte against the server's response: 2234 chars, two independent
+// hashes). It arrives as an f-puzzles payload, not scl.
+//
+// WHAT IT CONFIRMS:
+//  - `foglight` really is a list of "R1C1" strings, and really is the
+//    SINGLE-cell light. Its nine cells are exactly the central box, and the
+//    board lights exactly those nine. Read as 3x3 lights they would have lit
+//    a 5x5 block of 25 -- so this one number settles the size question.
+//  - a correct digit lights its 3x3, clipped at the corner (4 cells at
+//    R1C1), and a wrong one lights nothing.
+//  - the puzzle has ZERO givens: without fog handling it loads as a blank
+//    grid, and the nine lit cells are the entire starting position.
+//
+// WHAT IT STILL DOESN'T CONFIRM: `fogofwar` (the 3x3-light key) appears in
+// no real payload yet, and neither does any scl-side fog spelling. Those
+// remain research -- see state/fog.ts and design.md 11.1.
+{
+  const here = dirname(fileURLToPath(import.meta.url));
+  const raw = readFileSync(join(here, "fixtures", "fpuz-fog-c74ujud2wz.txt"), "utf8").trim();
+  check("fixture is an fpuz payload", raw.startsWith("fpuz"));
+  // decode.ts's fpuz branch: strip the prefix, URL-decode, lz-string, JSON.
+  const json = JSON.parse(LZString.decompressFromBase64(decodeURIComponent(raw.slice("fpuz".length)))!);
+  const m = parseFPuzzles(json);
+
+  check("real fog puzzle: title/author survive the import", m.title === "Fogs-n-Dots-n-Knights" && m.author === "Meggen033");
+  check("real fog puzzle: fog is detected", m.fog !== undefined);
+  check("real fog puzzle: nine foglight cells", m.fog?.lights.length === 9);
+  check("real fog puzzle: foglight is the single-cell light", m.fog?.lights.every((l) => l.size === 1) === true);
+  check("real fog puzzle: it carries a solution to check against", m.solution !== undefined);
+  check("real fog puzzle: it has no givens at all", m.grid.flat().every((cell) => cell.given === undefined));
+
+  const mask = computeFogMask(m);
+  check("real fog puzzle: 72 of 81 cells start covered", foggedCount(mask) === 72);
+  const lit: string[] = [];
+  for (let r = 0; r < m.size; r++) for (let c = 0; c < m.size; c++) if (!isFogged(mask, r, c)) lit.push(`R${r + 1}C${c + 1}`);
+  check(
+    "real fog puzzle: the lit start is exactly the central box",
+    lit.join(" ") === "R4C4 R4C5 R4C6 R5C4 R5C5 R5C6 R6C4 R6C5 R6C6",
+  );
+
+  m.grid[0]![0]!.value = m.solution![0]![0]!;
+  check("real fog puzzle: a correct corner digit lights its clipped 3x3", foggedCount(computeFogMask(m)) === 68);
+  m.grid[0]![0]!.value = m.solution![0]![0]! === 5 ? 6 : 5;
+  check("real fog puzzle: a wrong digit lights nothing", foggedCount(computeFogMask(m)) === 72);
+  m.grid[0]![0]!.value = undefined;
+
+  // Noise this fixture caught: f-puzzles editor/solver settings were being
+  // reported to the solver as unsupported *constraints*, i.e. the app
+  // claiming not to enforce rules the puzzle never had.
+  const unsupported = m.constraints
+    .filter((c): c is Extract<typeof c, { type: "unsupported" }> => c.type === "unsupported")
+    .map((c) => c.sourceKey);
+  check("real fog puzzle: solver settings are not reported as constraints", !unsupported.includes("disabledlogic"));
+  check("real fog puzzle: an empty key is not reported as a missing feature", !unsupported.includes("truecandidatesoptions"));
+  check("real fog puzzle: its real constraints still parse", m.constraints.some((c) => c.type === "littleKiller") && m.constraints.some((c) => c.type === "kropki"));
 }
 
 console.log(failed ? "\nSMOKE TEST: FAILED" : "\nAll fog checks passed.");

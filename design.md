@@ -959,13 +959,14 @@ or a "fow" cage would be parsed as a sum-less cage outline.
 Source for all of the above: sudocle's `fpuzzlesconverter.ts` /
 `ctcpuzzleconverter.ts` (michel-kraemer/sudocle), which normalize every fog
 spelling in both formats down to one `{center, size: 1 | 3}` shape -- the
-shape `FogLight` copies. **This is research, not a confirmed payload.** Every
-other format claim in this document that came from reading another project's
-source was wrong in some detail until a real payload settled it (7.6, 7.7),
-so a real fog puzzle in `scripts/fixtures/` is still owed; `state/fog.ts`
-carries a TODO saying so. Both importers accept `[row, col]` pairs *and*
-"R1C1" strings in the fog lists for that reason -- which spelling scl uses
-there isn't settled, the two are trivially distinguishable, and an
+shape `FogLight` copies.
+
+**One row of that table is now confirmed against a real payload; the rest
+is still research.** See 11.5. `foglight` on the f-puzzles side is settled.
+`fogofwar` has not turned up in a real payload, and neither has any
+scl-side fog spelling. Both importers accept `[row, col]` pairs *and*
+"R1C1" strings in the scl fog lists for that reason -- which spelling scl
+uses there isn't settled, the two are trivially distinguishable, and an
 off-by-one on fog hides the wrong part of the puzzle rather than merely
 looking wrong.
 
@@ -1037,3 +1038,49 @@ On a non-fog puzzle `computeFogMask` returns null and `revealedModel` hands
 back the model itself, so none of this allocates or behaves differently from
 before fog existed.
 
+### 11.5 The real fixture, and the two noise bugs it caught (2026-08-31)
+
+`scripts/fixtures/fpuz-fog-c74ujud2wz.txt` -- puzzle c74ujud2wz,
+"Fogs-n-Dots-n-Knights" by Meggen033. Captured through the desktop app's
+browser pane, since `sudokupad.app` is blocked from both the cloud sandbox
+and `device_bash` (403 at the proxy on both), and verified byte-for-byte
+against the server's own response: 2234 characters and two independent
+hashes computed in the page and re-computed on disk. Worth repeating for the
+next format question: **the payload came from a browser, not from curl**, and
+transcription was checked rather than trusted.
+
+It arrives as an **f-puzzles** payload despite the sudokupad.app URL, which
+is itself worth knowing -- a "SudokuPad puzzle" is not automatically scl.
+
+What it settled:
+
+- **`foglight` is the single-cell light.** Its nine cells are exactly the
+  central box (R4C4..R6C6) and the board lights exactly those nine. Read as
+  3x3 lights they would have lit a 5x5 block of 25. One count, question
+  closed.
+- **The 3x3-on-a-correct-digit rule is right.** The puzzle has *zero
+  givens*: nine lit empty cells plus that rule is the entire starting
+  position. Nothing else would make it solvable, and the fixture check
+  confirms a correct digit at R1C1 lights its clipped 2x2 corner while a
+  wrong one lights nothing.
+- **What it did not settle**: `fogofwar` and every scl-side spelling. Still
+  research.
+
+Two unrelated bugs it exposed in `fpuzzles.ts`, both in the "what isn't
+supported" note rather than in solving:
+
+1. `disabledlogic` and `truecandidatesoptions` are f-puzzles' own
+   editor/solver settings, and were being reported to the solver as
+   unsupported *constraints* -- the app claiming not to enforce rules the
+   puzzle never had. Now filtered by a `PLUMBING_KEYS` set.
+2. An **empty** value was reported the same way, so `truecandidatesoptions:
+   []` announced a missing feature the puzzle doesn't use. `scl.ts` has
+   skipped empty values since 7.7 for exactly this reason; the rule had
+   never been carried across to the f-puzzles parser.
+
+Still reported, and arguably still noise: f-puzzles' cosmetic `line` array.
+In this puzzle it is a duplicate rendering of the `renban` lines that *are*
+parsed and drawn, so the note reads oddly next to visible renban lines. The
+accurate fix is to render f-puzzles cosmetic shapes (`line`, `circle`,
+`rectangle`, `text`) through the same decorations channel scl uses, rather
+than to stop mentioning them -- deferred, not forgotten.

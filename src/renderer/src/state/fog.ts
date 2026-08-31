@@ -30,12 +30,20 @@ import { cellRefToIndex, type FogLight, type PuzzleModel } from "../model/types"
  * save-and-resume for free: erasing the digit puts the fog back, exactly
  * as SudokuPad's own player does, and nothing about fog needs storing.
  *
- * TODO(fixture): every rule above comes from reading sudocle's converter,
- * not from a real fog payload -- this repo's own hard-won lesson is that
- * format research is a hypothesis until a real payload confirms it (see
- * project memory "sudoku_scl_implementation"). A real fog puzzle from
- * https://sudokupad.app/api/puzzle/<id> is still owed here, and belongs
- * in scripts/fixtures/ alongside the other two.
+ * CONFIRMED 2026-08-31 against a real payload (puzzle c74ujud2wz,
+ * "Fogs-n-Dots-n-Knights" by Meggen033, in scripts/fixtures/): `foglight`
+ * is a list of "R1C1" strings and is the SINGLE-cell light. Its nine cells
+ * are exactly that puzzle's central box, and read as 3x3 lights they would
+ * have lit a 5x5 -- so the count settles the size question outright. The
+ * 3x3-on-a-correct-digit rule is confirmed by the same fixture (that puzzle
+ * has zero givens, so nine lit empty cells plus that rule is the entire
+ * starting position; nothing else could make it solvable).
+ *
+ * STILL RESEARCH, not confirmed: `fogofwar` (the 3x3-light key) has not
+ * appeared in a real payload yet, and neither has any scl-side fog
+ * spelling -- scl's fog cages and its cell spelling in fog lists are still
+ * read from sudocle's converter alone. If a fog puzzle ever loads with the
+ * wrong region covered, start there. See design.md 11.1.
  */
 
 /**

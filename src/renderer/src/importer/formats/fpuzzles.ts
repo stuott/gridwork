@@ -151,6 +151,16 @@ const KNOWN_KEYS = new Set([
 ]);
 
 /**
+ * Keys that are f-puzzles' own editor/solver settings rather than puzzle
+ * content. Reporting these as "unsupported constraint types" told the
+ * solver the app wasn't enforcing rules the puzzle never had -- the same
+ * noise bug scl.ts fixed on its side (design.md 7.6). Found by the real
+ * fog fixture, which carries `disabledlogic: ["contradictions"]` and an
+ * empty `truecandidatesoptions`.
+ */
+const PLUMBING_KEYS = new Set(["disabledlogic", "truecandidatesoptions", "highlightconflicts", "successmessage"]);
+
+/**
  * Parse one already-JSON-decoded f-puzzles puzzle object into the app's
  * normalized PuzzleModel.
  *
@@ -466,9 +476,20 @@ export function parseFPuzzles(raw: unknown): PuzzleModel {
   if (obj.nonconsecutive === true) globalRules.nonConsecutive = true;
 
   // Anything else isn't parsed at all yet -- kept so the UI can report what
-  // the puzzle uses that this app doesn't currently enforce.
+  // the puzzle uses that this app doesn't currently enforce. Two things are
+  // deliberately NOT reported: editor/solver settings (PLUMBING_KEYS), and
+  // keys whose value is empty, which mean the puzzle simply doesn't use that
+  // feature. scl.ts has skipped empty values since 2026-08-30 for exactly
+  // this reason; the rule never made it across to this parser until the real
+  // fog fixture showed an empty `truecandidatesoptions` being reported as a
+  // missing feature.
   for (const key of Object.keys(obj)) {
-    if (!KNOWN_KEYS.has(key)) pushUnsupported(key);
+    if (KNOWN_KEYS.has(key) || PLUMBING_KEYS.has(key.toLowerCase())) continue;
+    const value = obj[key];
+    if (value === null || value === undefined) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    if (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0) continue;
+    pushUnsupported(key);
   }
 
   let solution: number[][] | undefined;
